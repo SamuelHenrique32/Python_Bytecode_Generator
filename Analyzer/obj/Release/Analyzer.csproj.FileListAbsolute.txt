@@ -1,0 +1,6 @@
+D:\Projects\Analizer\Analyzer\bin\Release\Analyzer.dll
+D:\Projects\Analizer\Analyzer\bin\Release\Analyzer.pdb
+D:\Projects\Analizer\Analyzer\obj\Release\Analyzer.csproj.CoreCompileInputs.cache
+D:\Projects\Analizer\Analyzer\obj\Release\Analyzer.dll
+D:\Projects\Analizer\Analyzer\obj\Release\Analyzer.pdb
+D:\Projects\Analizer\Analyzer\obj\Release\Analyzer.csprojAssemblyReference.cache

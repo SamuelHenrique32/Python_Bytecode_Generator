@@ -1,0 +1,12 @@
+C:\Users\maria\source\repos\Analyzer\Analyzer\bin\Debug\Analyzer.dll
+C:\Users\maria\source\repos\Analyzer\Analyzer\bin\Debug\Analyzer.pdb
+C:\Users\maria\source\repos\Analyzer\Analyzer\obj\Debug\Analyzer.csprojResolveAssemblyReference.cache
+C:\Users\maria\source\repos\Analyzer\Analyzer\obj\Debug\Analyzer.csproj.CoreCompileInputs.cache
+C:\Users\maria\source\repos\Analyzer\Analyzer\obj\Debug\Analyzer.dll
+C:\Users\maria\source\repos\Analyzer\Analyzer\obj\Debug\Analyzer.pdb
+D:\Projects\Analizer\Analyzer\bin\Debug\Analyzer.dll
+D:\Projects\Analizer\Analyzer\bin\Debug\Analyzer.pdb
+D:\Projects\Analizer\Analyzer\obj\Debug\Analyzer.csproj.CoreCompileInputs.cache
+D:\Projects\Analizer\Analyzer\obj\Debug\Analyzer.dll
+D:\Projects\Analizer\Analyzer\obj\Debug\Analyzer.pdb
+D:\Projects\Analizer\Analyzer\obj\Debug\Analyzer.csprojAssemblyReference.cache

@@ -1,0 +1,10 @@
+Token: TkInt	Lexema: int	 Linha: 1	 Coluna: 0
+Token: TkId	Lexema: main	 Linha: 1	 Coluna: 4
+Token: TkAbreParenteses	Lexema: (	 Linha: 1	 Coluna: 4
+Token: TkFechaParenteses	Lexema: )	 Linha: 1	 Coluna: 9
+Token: TkAbreChaves	Lexema: {	 Linha: 1	 Coluna: 11
+Token: TkInt	Lexema: int	 Linha: 2	 Coluna: 0
+Token: TkId	Lexema: dividendo	 Linha: 2	 Coluna: 7
+Token: TkPontoEVirgula	Lexema: ;	 Linha: 2	 Coluna: 16
+Token: TkCharConst	Lexema: "Teste"	 Linha: 3	 Coluna: 0
+Token: TkFechaChaves	Lexema: }	 Linha: 5	 Coluna: 0
