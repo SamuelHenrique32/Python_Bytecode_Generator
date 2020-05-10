@@ -6,6 +6,8 @@ namespace ConsoleApp1
 {
     class Program
     {
+        BytecodeGenerator bytecodeGenerator = new BytecodeGenerator();
+
         static void Main(string[] args)
         {
             Init();
@@ -22,24 +24,53 @@ namespace ConsoleApp1
                 case 1:
                     Lexico();
                     break;
+
                 case 2:
                     Sintatico();
                     break;
+
                 case 3:
+                    BytecodeGenerator();
+                    break;
+
+                case 4:
                     Environment.Exit(0);
                     break;
+
                 default:
                     break;
-
             }
+        }
 
+        private static void BytecodeGenerator()
+        {
+            var bytecodeGenerator = new BytecodeGenerator();
+            Console.Clear();
+            Console.WriteLine("Digite o caminho do arquivo:");
+            var filePath = Console.ReadLine();
+
+            int counter = 1;
+            string line;
+
+            using (StreamReader file = new StreamReader(filePath))
+            {
+                while ((line = file.ReadLine()) != null)
+                {
+                    if (line.Length > 0)
+                    {
+                        //bytecodeGenerator.codigo = line;
+                    }
+                    counter++;
+
+                }
+            }
         }
 
         public static void Lexico()
         {
             var a = new Analisador();
             Console.Clear();
-            Console.WriteLine("Digite o caminho do arquivo");
+            Console.WriteLine("Digite o caminho do arquivo:");
             var c = Console.ReadLine();
 
             int counter = 1;
@@ -60,7 +91,6 @@ namespace ConsoleApp1
                 }
             }
             a.lastIndentation();
-            Console.WriteLine("Tokens Reconhecidos: ");
 
             a.PrintTokens();
             Console.ReadLine();
@@ -72,7 +102,7 @@ namespace ConsoleApp1
         {
             var s = new Sintatico();
             Console.Clear();
-            Console.WriteLine("Digite o caminho do arquivo");
+            Console.WriteLine("Digite o caminho do arquivo:");
             var c = Console.ReadLine();
 
             using (StreamReader file = new StreamReader(c))
@@ -100,7 +130,9 @@ namespace ConsoleApp1
         {
             Console.WriteLine("1 - Léxico");
             Console.WriteLine("2 - Sintático");
-            Console.WriteLine("3 - Sair");
+            Console.WriteLine("3 - Bytecode");
+            Console.WriteLine("4 - Sair");
+            Console.Write("Opcao Escolhida: ");
         }
     }
 }

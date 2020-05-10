@@ -581,6 +581,8 @@ namespace Analyzer
         }
         public void PrintTokens()
         {
+            Console.WriteLine("Tokens Reconhecidos: ");
+
             using (StreamWriter file = new StreamWriter("Tokens.lex"))
             {
                 foreach (var t in tks)
