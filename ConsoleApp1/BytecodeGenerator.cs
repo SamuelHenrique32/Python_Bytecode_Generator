@@ -7,9 +7,15 @@ namespace ConsoleApp1
 {
     internal class BytecodeGenerator
     {
-        private string filePath { get; set; }
+        public string filePath { get; set; }
 
-        public List<Token> lexicalTokens { get => lexicalTokens; set => lexicalTokens = value; }
+        public List<Token> lexicalTokens = new List<Token>();
+
+        public Boolean lexicAnalyzed = false;
+
+        public Boolean syntacticAnalyzed = false;
+
+        public Boolean correctSyntax;
 
         public BytecodeGenerator()
         {
@@ -17,33 +23,9 @@ namespace ConsoleApp1
 
         public void generateBytecode()
         {
-            var analyzer = new Analisador();
-
-            int counter = 1;
-            string line;
-
-            using (StreamReader file = new StreamReader(filePath))
-            {
-                while ((line = file.ReadLine()) != null)
-                {
-                    if (line.Length > 0)
-                    {
-                        analyzer.linha = counter;
-                        analyzer.codigo = line;
-                        analyzer.Analizar();
-                    }
-                    counter++;
-
-                }
-            }
-            analyzer.lastIndentation();
-
-            lexicalTokens = analyzer.tks;
-
             foreach (var t in lexicalTokens)
             {
-                Console.WriteLine("bytecode");
-                Console.WriteLine("Token: " + t.tipo.ToString() + "\tLexema: " + t.valor + "\t Linha: " + t.linha + "\t Coluna: " + t.coluna);
+                //Console.WriteLine("Token: " + t.tipo.ToString() + "\tLexema: " + t.valor + "\t Linha: " + t.linha + "\t Coluna: " + t.coluna);
             }            
         }
     }

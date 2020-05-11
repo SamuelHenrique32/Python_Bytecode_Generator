@@ -10,10 +10,12 @@ namespace ConsoleApp1
 
         static void Main(string[] args)
         {
-            Init();
+            BytecodeGenerator bytecodeGenerator = new BytecodeGenerator();
+
+            Init(bytecodeGenerator);
         }
 
-        public static void Init()
+        public static void Init(BytecodeGenerator bytecodeGenerator)
         {
             PrintMenu();
             var n = Console.ReadLine();
@@ -22,15 +24,15 @@ namespace ConsoleApp1
             switch (num)
             {
                 case 1:
-                    Lexico();
+                    Lexico(bytecodeGenerator, false, null);
                     break;
 
                 case 2:
-                    Sintatico();
+                    Sintatico(bytecodeGenerator, false, null);
                     break;
 
                 case 3:
-                    BytecodeGenerator();
+                    BytecodeGenerator(bytecodeGenerator);
                     break;
 
                 case 4:
@@ -42,36 +44,65 @@ namespace ConsoleApp1
             }
         }
 
-        private static void BytecodeGenerator()
+        private static void BytecodeGenerator(BytecodeGenerator bytecodeGenerator)
         {
-            var bytecodeGenerator = new BytecodeGenerator();
             Console.Clear();
-            Console.WriteLine("Digite o caminho do arquivo:");
-            var filePath = Console.ReadLine();
 
-            int counter = 1;
-            string line;
-
-            using (StreamReader file = new StreamReader(filePath))
+            if(!String.IsNullOrEmpty(bytecodeGenerator.filePath))
             {
-                while ((line = file.ReadLine()) != null)
-                {
-                    if (line.Length > 0)
-                    {
-                        //bytecodeGenerator.codigo = line;
-                    }
-                    counter++;
-
-                }
+                Console.WriteLine("Utilizando último caminho de arquivo informado\n\n");
             }
+            else
+            {
+                Console.WriteLine("Digite o caminho do arquivo:");
+                bytecodeGenerator.filePath = Console.ReadLine();
+            }
+
+            // If lexyc was not executed yet
+            if(!bytecodeGenerator.lexicAnalyzed)
+            {
+                Lexico(bytecodeGenerator, true, bytecodeGenerator.filePath);
+            }
+
+            if(!bytecodeGenerator.syntacticAnalyzed)
+            {
+                Sintatico(bytecodeGenerator, true, bytecodeGenerator.filePath);
+            }
+
+            if(bytecodeGenerator.correctSyntax)
+            {
+                bytecodeGenerator.generateBytecode();
+            }
+            else
+            {
+                Console.WriteLine("\nErro de sintaxe foi identificado, bytecode não gerado");
+            }
+
+            Console.WriteLine("\nPressione tecla");
+            Console.ReadLine();
+            Console.Clear();
+            Init(bytecodeGenerator);
         }
 
-        public static void Lexico()
+        public static void Lexico(BytecodeGenerator bytecodeGenerator, Boolean isCalledFromBytecodeGenerator, String filePath)
         {
             var a = new Analisador();
+            var c = "";
+
             Console.Clear();
-            Console.WriteLine("Digite o caminho do arquivo:");
-            var c = Console.ReadLine();
+
+            if (String.IsNullOrEmpty(filePath))
+            {
+                Console.WriteLine("Digite o caminho do arquivo:");
+
+                c = Console.ReadLine();
+
+                bytecodeGenerator.filePath = c;
+            }
+            else
+            {
+                c = filePath;
+            }
 
             int counter = 1;
             string line;
@@ -87,23 +118,43 @@ namespace ConsoleApp1
                         a.Analizar();
                     }
                     counter++;
-
                 }
             }
             a.lastIndentation();
 
-            a.PrintTokens();
-            Console.ReadLine();
-            Console.Clear();
-            Init();
+            bytecodeGenerator.lexicalTokens = a.tks;
+
+            bytecodeGenerator.lexicAnalyzed = true;
+
+            if (!isCalledFromBytecodeGenerator)
+            {
+                a.PrintTokens();
+                Console.WriteLine("\nPressione tecla");
+                Console.ReadLine();
+                Console.Clear();
+                Init(bytecodeGenerator);
+            }            
         }
 
-        public static void Sintatico()
+        public static void Sintatico(BytecodeGenerator bytecodeGenerator, Boolean isCalledFromBytecodeGenerator, String filePath)
         {
             var s = new Sintatico();
+            var c = "";
+
             Console.Clear();
-            Console.WriteLine("Digite o caminho do arquivo:");
-            var c = Console.ReadLine();
+
+            if (String.IsNullOrEmpty(filePath))
+            {
+                Console.WriteLine("Digite o caminho do arquivo:");
+
+                c = Console.ReadLine();
+
+                bytecodeGenerator.filePath = c;
+            }
+            else
+            {
+                c = filePath;
+            }
 
             using (StreamReader file = new StreamReader(c))
             {
@@ -112,18 +163,26 @@ namespace ConsoleApp1
                 if (result == 1)
                 {
                     Console.WriteLine("Reconhecido com sucesso");
+
+                    bytecodeGenerator.correctSyntax = true;
                 }
                 else
                 {
                     s.PrintErro();
-                }
 
+                    bytecodeGenerator.correctSyntax = false;
+                }
             }
 
-            Console.ReadLine();
-            Console.Clear();
-            Init();
+            bytecodeGenerator.syntacticAnalyzed = true;
 
+            if(!isCalledFromBytecodeGenerator)
+            {
+                Console.WriteLine("\nPressione tecla");
+                Console.ReadLine();
+                Console.Clear();
+                Init(bytecodeGenerator);
+            }
         }
 
         public static void PrintMenu()
