@@ -74,7 +74,7 @@ namespace Analyzer
             // Add first element of the table
             if (symbolsTable.Count == 0)
             {
-                Console.WriteLine("\nAdding first symbol\n");
+                //Console.WriteLine("\nAdding first symbol\n");
 
                 // Creates symbol
                 Symbol symbolToAdd = new Symbol();
@@ -85,7 +85,7 @@ namespace Analyzer
                 // Add to table of symbols
                 symbolsTable.Add(symbolToAdd);
 
-                symbolToString(symbolToAdd);
+                //symbolToString(symbolToAdd);
 
                 currentIDAlreadyInSymbolsTable = false;
 
@@ -96,7 +96,7 @@ namespace Analyzer
                 // Verify if already exists in symbolsTable
                 if (verifyIfSymbolsExistsInTable(token))
                 {
-                    Console.WriteLine("Symbol '" + token.valor + "' already exists in symbols table");
+                    //Console.WriteLine("Symbol '" + token.valor + "' already exists in symbols table");
 
                     updateSymbolsTable(token);
 
@@ -104,7 +104,7 @@ namespace Analyzer
                 }
                 else
                 {
-                    Console.WriteLine("Adding symbol '" + token.valor + "'\n");
+                    //Console.WriteLine("Adding symbol '" + token.valor + "'\n");
 
                     // Creates symbol
                     Symbol symbolToAdd = new Symbol();
@@ -248,8 +248,59 @@ namespace Analyzer
                         }
 
                     break;
+                }                
+            }
+            printGeneratedBytecode();
+        }
+
+        public void printGeneratedBytecode()
+        {
+            int lastPrintedLine = 0;
+
+            Console.WriteLine("Bytecode Gerado:");
+
+            foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
+            {
+                if (bytecodeRegister.lineInFile != lastPrintedLine)
+                {
+                    Console.Write("\n" + bytecodeRegister.lineInFile + "\t");
+
+                    lastPrintedLine = bytecodeRegister.lineInFile;
                 }
+                else
+                {
+                    Console.Write("\t");
+                }
+
+                Console.Write(bytecodeRegister.offset + "  ");
+
+                Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
+
+                // TODO
+                Console.Write(bytecodeRegister.stackPos + "  ");
+
+                Console.WriteLine(bytecodeRegister.preview);
             }
         }
-    }
+
+        public String getOpCodeDescription(int opCode)
+        {
+            switch (opCode)
+            {
+                case 0:
+
+                    return "LOAD_CONST";
+
+                break;
+
+                case 1:
+
+                    return "STORE_FAST";
+
+                break;
+            }
+
+            return "";
+        }
+    }    
 }
