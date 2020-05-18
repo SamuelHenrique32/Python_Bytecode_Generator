@@ -8,10 +8,18 @@ namespace Analyzer
 {
     public class Operation
     {
-        int operand1;
+        private String operand1;
 
-        int operand2;
+        private String operand2;
+        
+        private int currentOperator;
+        public Operation(String operand1, String operand2, int currentOperator)
+        {
+            this.operand1 = operand1;
 
-        int ooperator;
+            this.operand2 = operand2;
+
+            this.currentOperator = currentOperator;
+        }        
     }
 }

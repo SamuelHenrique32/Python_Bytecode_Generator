@@ -228,8 +228,6 @@ namespace Analyzer
 
         public void generateBytecode()
         {
-            int currentLexeme = 0;
-
             currentIDAlreadyInSymbolsTable = false;
 
             // Foreach lexeme identified by lexicon
@@ -243,7 +241,7 @@ namespace Analyzer
 
                     resetCountOperators();
 
-                    countOperators(currentLineInFile);
+                    verifyOperatorsInCurrentLine(currentLineInFile);
                 }
 
                 switch (t.tipo)
@@ -343,64 +341,79 @@ namespace Analyzer
             return "";
         }
 
-        public void countOperators(int currentLine)
+        public void verifyOperatorsInCurrentLine(int currentLine)
         {
             for(int i=0; i< lexicalTokens.Count; i++)
             {
                 if(lexicalTokens[i].linha == currentLine)
                 {
+                    // TODO Don't call operationsInCurrentLine so many times
                     switch (lexicalTokens[i].tipo)
                     {
                         case TipoTk.TkMais:
                             addOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i-1].valor, lexicalTokens[i+1].valor, (int) lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMenos:
                             subtractionOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMultiplicaco:
                             multiplicationOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkDivisao:
                             divOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMaisIgual:
                             reducedAddOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMenosIgual:
                             reducedSubtractionOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMulIgual:
                             reducedMultiplicationOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkDivIgual:
                             reducedDivOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkIgual:
                             equalOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkDiferente:
                             difOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMenor:
                             lessThanOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
 
                         case TipoTk.TkMaior:
                             biggerThanOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
-
+                        
+                        // TODO If the expressions has more than one value after comma, review the operand2
                         case TipoTk.TkAtrib:
                             attribuitionOperatorCounter++;
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
                         break;
                     }
                 }
@@ -434,6 +447,8 @@ namespace Analyzer
             biggerThanOperatorCounter = 0;
 
             attribuitionOperatorCounter = 0;
+
+            operationsInCurrentLine.Clear();
         }
     }    
 }
