@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection.Emit;
+using System.Threading;
 
 namespace Analyzer
 {
@@ -35,6 +36,40 @@ namespace Analyzer
         //--------------------------------------------------------------------------------------
         // Operations
         public Boolean operationAssignmentInProgress = false;
+
+        public List<Operation> operationsInCurrentLine = new List<Operation>();
+
+        //--------------------------------------------------------------------------------------
+
+        //--------------------------------------------------------------------------------------
+        // Operators counter
+        public int addOperatorCounter = 0;
+
+        public int subtractionOperatorCounter = 0;
+
+        public int multiplicationOperatorCounter = 0;
+
+        public int divOperatorCounter = 0;
+
+        public int reducedAddOperatorCounter = 0;
+
+        public int reducedSubtractionOperatorCounter = 0;
+
+        public int reducedMultiplicationOperatorCounter = 0;
+
+        public int reducedDivOperatorCounter = 0;
+
+        public int equalOperatorCounter = 0;
+
+        public int difOperatorCounter = 0;
+
+        public int lessThanOperatorCounter = 0;
+
+        public int biggerThanOperatorCounter = 0;
+
+        public int attribuitionOperatorCounter = 0;
+
+        //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
         {
@@ -202,6 +237,15 @@ namespace Analyzer
             {
                 //Console.WriteLine("Token: " + t.tipo.ToString() + "\tLexema: " + t.valor + "\t Linha: " + t.linha + "\t Coluna: " + t.coluna);
 
+                if(t.linha != currentLineInFile)
+                {
+                    currentLineInFile = t.linha;
+
+                    resetCountOperators();
+
+                    countOperators(currentLineInFile);
+                }
+
                 switch (t.tipo)
                 {
                     case TipoTk.TkId:
@@ -210,7 +254,7 @@ namespace Analyzer
 
                         verifyTkId(t);
 
-                        handleTkId(t, currentLexeme);
+                        //handleTkId(t, currentLexeme);
 
                     break;
 
@@ -225,7 +269,7 @@ namespace Analyzer
 
                     case TipoTk.TkNumconst:
 
-                        if (operationAssignmentInProgress)
+                        /*if (operationAssignmentInProgress)
                         {
                             operationAssignmentInProgress = false;
 
@@ -245,7 +289,7 @@ namespace Analyzer
                             bytecodeRegisters[currentLineInGeneratedBytecode - 1].preview = ("(" + t.valor + ")");
 
                             this.currentLineInGeneratedBytecode++;
-                        }
+                        }*/
 
                     break;
                 }                
@@ -288,19 +332,108 @@ namespace Analyzer
             switch (opCode)
             {
                 case 0:
-
                     return "LOAD_CONST";
-
                 break;
 
                 case 1:
-
                     return "STORE_FAST";
-
                 break;
             }
 
             return "";
+        }
+
+        public void countOperators(int currentLine)
+        {
+            for(int i=0; i< lexicalTokens.Count; i++)
+            {
+                if(lexicalTokens[i].linha == currentLine)
+                {
+                    switch (lexicalTokens[i].tipo)
+                    {
+                        case TipoTk.TkMais:
+                            addOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMenos:
+                            subtractionOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMultiplicaco:
+                            multiplicationOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkDivisao:
+                            divOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMaisIgual:
+                            reducedAddOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMenosIgual:
+                            reducedSubtractionOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMulIgual:
+                            reducedMultiplicationOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkDivIgual:
+                            reducedDivOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkIgual:
+                            equalOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkDiferente:
+                            difOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMenor:
+                            lessThanOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkMaior:
+                            biggerThanOperatorCounter++;
+                        break;
+
+                        case TipoTk.TkAtrib:
+                            attribuitionOperatorCounter++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        public void resetCountOperators()
+        {
+            addOperatorCounter = 0;
+
+            subtractionOperatorCounter = 0;
+
+            multiplicationOperatorCounter = 0;
+
+            divOperatorCounter = 0;
+
+            reducedAddOperatorCounter = 0;
+
+            reducedSubtractionOperatorCounter = 0;
+
+            reducedMultiplicationOperatorCounter = 0;
+
+            reducedDivOperatorCounter = 0;
+
+            equalOperatorCounter = 0;
+
+            difOperatorCounter = 0;
+
+            lessThanOperatorCounter = 0;
+
+            biggerThanOperatorCounter = 0;
+
+            attribuitionOperatorCounter = 0;
         }
     }    
 }
