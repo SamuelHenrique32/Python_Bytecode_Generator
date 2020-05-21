@@ -1,4 +1,5 @@
 ﻿using Analyzer;
+using ConsoleApp1;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,7 +43,7 @@ namespace Analyzer
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
-        // Operators counter
+        // Elements in line counter
         public int addOperatorCounter = 0;
 
         public int subtractionOperatorCounter = 0;
@@ -69,10 +70,17 @@ namespace Analyzer
 
         public int attribuitionOperatorCounter = 0;
 
+        public int idElementsCounter = 0;
+
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
         {
+        }
+
+        public int getLastLineInFile()
+        {
+            return lexicalTokens[lexicalTokens.Count-1].linha;
         }
 
         public Boolean verifyIfSymbolsExistsInTable(Token token)
@@ -139,6 +147,15 @@ namespace Analyzer
                 }
                 else
                 {
+                    // If there is an attribution and this id is not in the symbols table there is a semantic error
+                    if (attribuitionOperatorCounter>0)
+                    {
+                        Console.WriteLine("\nErro semântico, a variável '" + token.valor + "' não está definida\n");
+
+                        Program.Init(this);
+
+                    }
+
                     //Console.WriteLine("Adding symbol '" + token.valor + "'\n");
 
                     // Creates symbol
@@ -165,25 +182,7 @@ namespace Analyzer
 
                     operationAssignmentInProgress = true;
 
-                    //--------------------------------------------------------------------------------------
-                    // Prepares LOAD_CONST
-                    BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
-                    
-                    bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
-                    
-                    bytecodeRegisterCurrentToken.lineInFile = tk.linha;
-                    
-                    bytecodeRegisterCurrentToken.offset = currentOffset;
-
-                    this.currentOffset += 2;
-
-                    bytecodeRegisterCurrentToken.opCode = (int) OpCode.LOAD_CONST;
-                    
-                    // TODO
-                    bytecodeRegisterCurrentToken.stackPos = 0;
-
-                    bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
-                    //--------------------------------------------------------------------------------------
+                   
 
                     //--------------------------------------------------------------------------------------
                     // Prepares STORE_FAST
@@ -230,76 +229,176 @@ namespace Analyzer
         {
             currentIDAlreadyInSymbolsTable = false;
 
-            // Foreach lexeme identified by lexicon
-            foreach (var t in lexicalTokens)
+            currentLineInFile = 1;
+
+            for (int i=1; i<=getLastLineInFile(); i++)
             {
-                //Console.WriteLine("Token: " + t.tipo.ToString() + "\tLexema: " + t.valor + "\t Linha: " + t.linha + "\t Coluna: " + t.coluna);
-
-                if(t.linha != currentLineInFile)
+                // New line, analyze first element in line
+                if (lexicalTokens[i].linha == currentLineInFile)
                 {
-                    currentLineInFile = t.linha;
-
-                    resetCountOperators();
+                    resetLineElements();
 
                     verifyOperatorsInCurrentLine(currentLineInFile);
+
+                    currentLineInFile++;
+
+                    handleLine(i);
+
+                    break;
+                }
+            }
+
+            printGeneratedBytecode();
+        }
+
+        public String getVariableForAttribuition()
+        {
+            foreach(Operation op in operationsInCurrentLine)
+            {
+                if(op.currentOperator == TipoTk.TkAtrib)
+                {
+                    return op.operand1;
+                }
+            }
+
+            return null;
+        }
+
+        public void handleLine(int line)
+        {
+            // Verify arithmetic operations with constants
+            for(int i=0; i<operationsInCurrentLine.Count; i++)
+            {
+                // Precedence 1
+                if(operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)
+                {
+                     arithmeticOperation(operationsInCurrentLine[i], i);
                 }
 
-                switch (t.tipo)
-                {
-                    case TipoTk.TkId:
-
-                        //Console.WriteLine("\nEh id\n");
-
-                        verifyTkId(t);
-
-                        //handleTkId(t, currentLexeme);
-
-                    break;
-
-                    case TipoTk.TkAtrib:
-
-                        if (operationAssignmentInProgress)
-                        {
-                            // For now, do nothing
-                        }
-
-                    break;
-
-                    case TipoTk.TkNumconst:
-
-                        /*if (operationAssignmentInProgress)
-                        {
-                            operationAssignmentInProgress = false;
-
-                            bytecodeRegisters[currentLineInGeneratedBytecode].lineInGeneratedBytecode = currentLineInGeneratedBytecode;
-
-                            bytecodeRegisters[currentLineInGeneratedBytecode].lineInFile = t.linha;
-
-                            bytecodeRegisters[currentLineInGeneratedBytecode].offset = currentOffset;
-
-                            this.currentOffset += 2;
-
-                            bytecodeRegisters[currentLineInGeneratedBytecode].opCode = (int)OpCode.STORE_FAST;
-
-                            // TODO
-                            bytecodeRegisters[currentLineInGeneratedBytecode].stackPos = 0;
-
-                            bytecodeRegisters[currentLineInGeneratedBytecode - 1].preview = ("(" + t.valor + ")");
-
-                            this.currentLineInGeneratedBytecode++;
-                        }*/
-
-                    break;
-                }                
             }
-            printGeneratedBytecode();
+
+            //--------------------------------------------------------------------------------------
+            // Prepares LOAD_CONST
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            this.currentOffset += 2;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count-1].result.ToString() + ")";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+            //--------------------------------------------------------------------------------------
+
+            //--------------------------------------------------------------------------------------
+            // Prepares attribuition
+
+            // If there is a attribuition
+            if (attribuitionOperatorCounter>0)
+            {
+
+                BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
+
+                bytecodeRegisterForAttribuition.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+                bytecodeRegisterForAttribuition.lineInFile = line;
+
+                bytecodeRegisterForAttribuition.offset = currentOffset;
+
+                this.currentOffset += 2;
+
+                bytecodeRegisterForAttribuition.opCode = (int)OpCode.STORE_NAME;
+
+                // TODO
+                bytecodeRegisterForAttribuition.stackPos = 0;
+
+                bytecodeRegisterForAttribuition.preview = "(" + getVariableForAttribuition() + ")";
+
+                bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
+            }
+
+            //--------------------------------------------------------------------------------------
+        }
+
+        public void arithmeticOperation(Operation operation, int index)
+        {
+            switch (operation.currentOperator)
+            {
+                case TipoTk.TkMais:
+
+                    if(!verifyResultForLeftElement(operation.operand1Column))
+                    {
+                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) + Int16.Parse(operation.operand2));
+                    }
+                    else
+                    {
+                        operationsInCurrentLine[index].result = getResultOfOperation(operation.operand1Column) + Int16.Parse(operation.operand2);
+                    }
+                    
+                break;
+
+                case TipoTk.TkMenos:
+
+                    if (!verifyResultForLeftElement(operation.operand1Column))
+                    {
+                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) - Int16.Parse(operation.operand2));
+                    }
+                    else
+                    {
+                        operationsInCurrentLine[index].result = getResultOfOperation(operation.operand1Column) - Int16.Parse(operation.operand2);
+                    }
+
+                break;
+            }
+        }
+
+        public int? getResultOfOperation(int elementColumn)
+        {
+            foreach (Operation op in operationsInCurrentLine)
+            {
+                if (op.operand2Column == elementColumn)
+                {
+                    if (op.result != null)
+                    {
+                        return op.result;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        public Boolean verifyResultForLeftElement(int elementColumn)
+        {
+            foreach(Operation op in operationsInCurrentLine)
+            {                
+                if(op.operand2Column == elementColumn)
+                {
+                    // There is a operation with this element thas was already calculated
+                    if (op.result != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public void printGeneratedBytecode()
         {
             int lastPrintedLine = 0;
 
-            Console.WriteLine("Bytecode Gerado:");
+            Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
             {
@@ -336,6 +435,10 @@ namespace Analyzer
                 case 1:
                     return "STORE_FAST";
                 break;
+
+                case 2:
+                    return "STORE_NAME";
+                break;
             }
 
             return "";
@@ -352,75 +455,81 @@ namespace Analyzer
                     {
                         case TipoTk.TkMais:
                             addOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i-1].valor, lexicalTokens[i+1].valor, (int) lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i-1].valor, lexicalTokens[i+1].valor, lexicalTokens[i-1].coluna, lexicalTokens[i+1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMenos:
                             subtractionOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMultiplicaco:
                             multiplicationOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_PRECEDENCE));
                         break;
 
                         case TipoTk.TkDivisao:
                             divOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIV_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMaisIgual:
                             reducedAddOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_REDUCED_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMenosIgual:
                             reducedSubtractionOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_REDUCED_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMulIgual:
                             reducedMultiplicationOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_REDUCED_PRECEDENCE));
                         break;
 
                         case TipoTk.TkDivIgual:
                             reducedDivOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIV_REDUCED_PRECEDENCE));
                         break;
 
                         case TipoTk.TkIgual:
                             equalOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_EQUAL_PRECEDENCE));
                         break;
 
                         case TipoTk.TkDiferente:
                             difOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIFF_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMenor:
                             lessThanOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_LESS_THAN_PRECEDENCE));
                         break;
 
                         case TipoTk.TkMaior:
                             biggerThanOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_BIGGER_THAN_PRECEDENCE));
                         break;
                         
                         // TODO If the expressions has more than one value after comma, review the operand2
                         case TipoTk.TkAtrib:
                             attribuitionOperatorCounter++;
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, (int)lexicalTokens[i].tipo));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE));
                         break;
+
+                        case TipoTk.TkId:
+                            idElementsCounter++;
+                            verifyTkId(lexicalTokens[i]);
+                        break;
+
                     }
                 }
             }
         }
 
-        public void resetCountOperators()
+        public void resetLineElements()
         {
             addOperatorCounter = 0;
 
@@ -449,6 +558,8 @@ namespace Analyzer
             attribuitionOperatorCounter = 0;
 
             operationsInCurrentLine.Clear();
+
+            idElementsCounter = 0;
         }
     }    
 }

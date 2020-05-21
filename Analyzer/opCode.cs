@@ -9,6 +9,7 @@ namespace Analyzer
     public enum OpCode
     {
         LOAD_CONST,
-        STORE_FAST
+        STORE_FAST,
+        STORE_NAME
     }
 }
