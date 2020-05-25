@@ -73,6 +73,11 @@ namespace Analyzer
         public int idElementsCounter = 0;
 
         //--------------------------------------------------------------------------------------
+        // Boolean variables to control the bytecode mounting
+        public Boolean printLoadConst = false;
+
+        public Boolean printSimpleAtrib = false;
+        //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
         {
@@ -225,16 +230,98 @@ namespace Analyzer
             return lexicalTokens[currentPos + 1];
         }
 
+        public void mountBytecode(int currentLine)
+        {
+            //--------------------------------------------------------------------------------------
+            // Prepares LOAD_CONST
+
+            // Verify if it's necessary to load a constant
+            if (printLoadConst)
+            {
+                printLoadConst = false;
+
+                BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+                bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+                bytecodeRegisterCurrentToken.lineInFile = currentLine;
+
+                bytecodeRegisterCurrentToken.offset = currentOffset;
+
+                this.currentOffset += 2;
+
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
+
+                // TODO
+                bytecodeRegisterCurrentToken.stackPos = 0;
+
+                // If it's a simple atrib, it's necessary to load the operand 2
+                if (printSimpleAtrib)
+                {
+                    printSimpleAtrib = false;
+
+                    bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2.ToString() + ")";
+                }
+                // Load result
+                else
+                {
+                    bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].result.ToString() + ")";
+                }                
+
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);                
+            }
+            //--------------------------------------------------------------------------------------
+
+            //--------------------------------------------------------------------------------------
+            // Prepares attribuition
+
+            // If there is a attribuition
+            if (attribuitionOperatorCounter > 0)
+            {
+
+                BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
+
+                bytecodeRegisterForAttribuition.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+                bytecodeRegisterForAttribuition.lineInFile = currentLine;
+
+                bytecodeRegisterForAttribuition.offset = currentOffset;
+
+                this.currentOffset += 2;
+
+                bytecodeRegisterForAttribuition.opCode = (int)OpCode.STORE_NAME;
+
+                // TODO
+                bytecodeRegisterForAttribuition.stackPos = 0;
+
+                bytecodeRegisterForAttribuition.preview = "(" + getVariableForAttribuition() + ")";
+
+                bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
+            }
+            //--------------------------------------------------------------------------------------
+        }
+
         public void generateBytecode()
         {
             currentIDAlreadyInSymbolsTable = false;
 
             currentLineInFile = 1;
 
+            int j = currentLineInFile-1;
+
+            // For each line in file
             for (int i=1; i<=getLastLineInFile(); i++)
             {
+                j = 0;
+
+                // Find the first lexical token that has the line according to current line in file
+                while(lexicalTokens[j].linha != currentLineInFile)
+                {
+                    j++;
+                }
+
                 // New line, analyze first element in line
-                if (lexicalTokens[i].linha == currentLineInFile)
+                if (lexicalTokens[j].linha == currentLineInFile)
                 {
                     resetLineElements();
 
@@ -244,7 +331,7 @@ namespace Analyzer
 
                     handleLine(i);
 
-                    break;
+                    continue;
                 }
             }
 
@@ -273,60 +360,28 @@ namespace Analyzer
                 if(operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)
                 {
                      arithmeticOperation(operationsInCurrentLine[i], i);
+
+                    // It's necessary to show LOAD_CONST
+                    printLoadConst = true;
                 }
-
             }
 
-            //--------------------------------------------------------------------------------------
-            // Prepares LOAD_CONST
-            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
-
-            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
-
-            bytecodeRegisterCurrentToken.lineInFile = line;
-
-            bytecodeRegisterCurrentToken.offset = currentOffset;
-
-            this.currentOffset += 2;
-
-            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
-
-            // TODO
-            bytecodeRegisterCurrentToken.stackPos = 0;
-
-            bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count-1].result.ToString() + ")";
-
-            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
-            //--------------------------------------------------------------------------------------
-
-            //--------------------------------------------------------------------------------------
-            // Prepares attribuition
-
-            // If there is a attribuition
-            if (attribuitionOperatorCounter>0)
+            // Simple atrib
+            for (int i = 0; i < operationsInCurrentLine.Count; i++)
             {
+                // Precedence -1 and it's the last operation in this line
+                if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE) && (i == operationsInCurrentLine.Count-1))
+                {
+                    // It's necessary to show LOAD_CONST
+                    printLoadConst = true;
 
-                BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
+                    printSimpleAtrib = true;
 
-                bytecodeRegisterForAttribuition.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
-
-                bytecodeRegisterForAttribuition.lineInFile = line;
-
-                bytecodeRegisterForAttribuition.offset = currentOffset;
-
-                this.currentOffset += 2;
-
-                bytecodeRegisterForAttribuition.opCode = (int)OpCode.STORE_NAME;
-
-                // TODO
-                bytecodeRegisterForAttribuition.stackPos = 0;
-
-                bytecodeRegisterForAttribuition.preview = "(" + getVariableForAttribuition() + ")";
-
-                bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
+                    break;
+                }
             }
 
-            //--------------------------------------------------------------------------------------
+            mountBytecode(line);
         }
 
         public void arithmeticOperation(Operation operation, int index)
