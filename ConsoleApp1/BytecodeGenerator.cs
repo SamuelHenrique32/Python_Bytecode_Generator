@@ -79,6 +79,8 @@ namespace Analyzer
 
         public Boolean printerSimpleAtrib = false;
 
+        public Boolean foundAnIdentifier = false;
+
         public int? printerLastExpressionResult = null;
         //--------------------------------------------------------------------------------------
 
@@ -105,7 +107,7 @@ namespace Analyzer
         {
             for (int i = 0; i < symbolsTable.Count; i++)
             {
-                if (symbolsTable[i].symbol.ToString().Equals(token.valor))
+                if (symbolsTable[i].identifier.ToString().Equals(token.valor))
                 {
                     return true;
                 }
@@ -118,8 +120,8 @@ namespace Analyzer
         {
             for (int i = 0; i < symbolsTable.Count; i++)
             {
-                // Add line and column of the current element
-                if (symbolsTable[i].symbol.ToString().Equals(token.valor))
+                // Add line and column of the current element and update value
+                if (symbolsTable[i].identifier.ToString().Equals(token.valor))
                 {
                     symbolsTable[i].lines.Add(token.linha);
 
@@ -139,7 +141,7 @@ namespace Analyzer
 
                 // Creates symbol
                 Symbol symbolToAdd = new Symbol();
-                symbolToAdd.symbol = token.valor;
+                symbolToAdd.identifier = token.valor;
                 symbolToAdd.lines.Add(token.linha);
                 symbolToAdd.columns.Add(token.coluna);
 
@@ -178,7 +180,7 @@ namespace Analyzer
 
                     // Creates symbol
                     Symbol symbolToAdd = new Symbol();
-                    symbolToAdd.symbol = token.valor;
+                    symbolToAdd.identifier = token.valor;
                     symbolToAdd.lines.Add(token.linha);
                     symbolToAdd.columns.Add(token.coluna);
 
@@ -186,6 +188,35 @@ namespace Analyzer
                     symbolsTable.Add(symbolToAdd);
 
                     currentIDAlreadyInSymbolsTable = false;
+                }
+            }
+        }
+
+        public int? getIdentifierValue(String identifier)
+        {
+            foreach(Symbol sym in symbolsTable)
+            {
+                if (sym.identifier.Equals(identifier))
+                {
+                    if (sym.value != null)
+                    {
+                        return sym.value;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public void updateIdentifierValue(String identifier, int? value)
+        {
+            foreach(Symbol sym in symbolsTable)
+            {
+                if (sym.identifier.Equals(identifier))
+                {
+                    sym.value = value;
+
+                    break;
                 }
             }
         }
@@ -219,7 +250,7 @@ namespace Analyzer
         {
             Console.WriteLine("-----------------------------");
 
-            Console.WriteLine("Symbol: " + sym.symbol + "\n");
+            Console.WriteLine("Symbol: " + sym.identifier + "\n");
 
             Console.WriteLine("Lines:");
 
@@ -245,15 +276,16 @@ namespace Analyzer
 
         public void mountBytecode(int currentLine)
         {
+            int? identifierValue = 0;
             //--------------------------------------------------------------------------------------
             // Prepares LOAD_CONST
 
             // Verify if it's necessary to load a constant
             if (printerLoadConst)
             {
-                printerLoadConst = false;
-
                 BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+                printerLoadConst = false;
 
                 bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
 
@@ -274,12 +306,16 @@ namespace Analyzer
                     printerSimpleAtrib = false;
 
                     bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2.ToString() + ")";
+
+                    identifierValue = Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2);
                 }
                 // Load result
                 else
                 {
                     bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
-                }                
+
+                    identifierValue = printerLastExpressionResult;
+                }
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);                
             }
@@ -289,9 +325,8 @@ namespace Analyzer
             // Prepares attribuition
 
             // If there is a attribuition
-            if (attribuitionOperatorCounter > 0)
+            if ((attribuitionOperatorCounter > 0) && (!foundAnIdentifier))
             {
-
                 BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
 
                 bytecodeRegisterForAttribuition.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
@@ -309,9 +344,14 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.preview = "(" + getVariableForAttribuition() + ")";
 
+                // Update symbols table
+                updateIdentifierValue(getVariableForAttribuition(), identifierValue);
+
                 bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
             }
             //--------------------------------------------------------------------------------------
+
+            foundAnIdentifier = false;
         }
 
         public void generateBytecode()
@@ -340,9 +380,9 @@ namespace Analyzer
 
                     verifyOperatorsInCurrentLine(currentLineInFile);
 
-                    currentLineInFile++;
-
                     handleLine(i);
+
+                    currentLineInFile++;
 
                     continue;
                 }
@@ -421,44 +461,85 @@ namespace Analyzer
 
         public void arithmeticOperation(Operation operation, int index)
         {
-            int? newOperand1 = 0;
-            int? newOperand2 = 0;
+            int? operand1 = null;
+            int? operand2 = null;
+
+            int? newOperand1 = null;
+            int? newOperand2 = null;
+
+            // Verify if the first operand is identifier
+            if (isIdentifier(operation.operand1))
+            {
+                foundAnIdentifier = true;
+
+                mountBytecode(currentLineInFile);
+
+                newOperand1 = getIdentifierValue(operation.operand1);
+            }
+
+            // Verify if the second operand is identifier
+            if (isIdentifier(operation.operand2))
+            {
+                foundAnIdentifier = true;
+
+                mountBytecode(currentLineInFile);
+
+                newOperand2 = getIdentifierValue(operation.operand2);
+            }
+
+            if (newOperand1 != null)
+            {
+                operand1 = newOperand1;
+            }
+            else
+            {
+                operand1 = Int16.Parse(operation.operand1);
+            }
+
+            if (newOperand2 != null)
+            {
+                operand2 = newOperand2;
+            }
+            else
+            {
+                operand2 = Int16.Parse(operation.operand2);
+            }
 
             switch (operation.currentOperator)
             {
-                case TipoTk.TkMais:
+                case TipoTk.TkMais:                    
 
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) + Int16.Parse(operation.operand2));
+                        operationsInCurrentLine[index].result = operand1 + operand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = newOperand1 + Int16.Parse(operation.operand2);
+                        operationsInCurrentLine[index].result = operand1 + operand2;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) + newOperand2;
+                        operationsInCurrentLine[index].result = operand1 + operand2;
                     }
                     // Both elements was already used
                     else
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = newOperand1 + newOperand2;
+                        operationsInCurrentLine[index].result = operand1 + operand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
-                    break;
+                break;
 
                 case TipoTk.TkMenos:
 
@@ -526,7 +607,7 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
-                    break;
+                break;
 
                 case TipoTk.TkDivisao:
 
@@ -560,7 +641,24 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
-                    break;
+                break;
+            }
+        }
+
+        public Boolean isIdentifier(String operand)
+        {
+            int result = 0;
+
+            // Try to convert, if it isn't possible, return true indicating that the operand is an identifier
+            try
+            {
+                result = Int16.Parse(operand);
+
+                return false;
+            }
+            catch (Exception e)
+            {
+                return true;
             }
         }
 
@@ -717,7 +815,6 @@ namespace Analyzer
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_BIGGER_THAN_PRECEDENCE));
                         break;
                         
-                        // TODO If the expressions has more than one value after comma, review the operand2
                         case TipoTk.TkAtrib:
                             attribuitionOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE));

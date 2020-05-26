@@ -5,7 +5,9 @@ namespace Analyzer
 {
 	public class Symbol
 	{
-		public string symbol { get; set; }
+		public string identifier { get; set; }
+
+		public int? value { get; set; }
 
 		public List<int> lines = new List<int>();
 
