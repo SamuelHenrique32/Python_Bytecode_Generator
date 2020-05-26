@@ -428,16 +428,37 @@ namespace Analyzer
             {
                 case TipoTk.TkMais:
 
-                    if(!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
+                    // There is no operator already used
+                    if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
                         operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) + Int16.Parse(operation.operand2));
                     }
+                    // Left element was already used
+                    else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+
+                        operationsInCurrentLine[index].result = newOperand1 + Int16.Parse(operation.operand2);
+                    }
+                    // Right element was already used
+                    else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) + newOperand2;
+                    }
+                    // Both elements was already used
                     else
                     {
-                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) + Int16.Parse(operation.operand2);
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = newOperand1 + newOperand2;
                     }
-                    
-                break;
+
+                    printerLastExpressionResult = operationsInCurrentLine[index].result;
+
+                    break;
 
                 case TipoTk.TkMenos:
 
@@ -471,33 +492,75 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
-                    break;
+                break;
 
                 case TipoTk.TkMultiplicaco:
 
-                    if (!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
+                    // There is no operator already used
+                    if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
                         operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) * Int16.Parse(operation.operand2));
                     }
+                    // Left element was already used
+                    else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+
+                        operationsInCurrentLine[index].result = newOperand1 * Int16.Parse(operation.operand2);
+                    }
+                    // Right element was already used
+                    else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) * newOperand2;
+                    }
+                    // Both elements was already used
                     else
                     {
-                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) * Int16.Parse(operation.operand2);
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = newOperand1 * newOperand2;
                     }
-                        
-                break;
+
+                    printerLastExpressionResult = operationsInCurrentLine[index].result;
+
+                    break;
 
                 case TipoTk.TkDivisao:
 
-                    if (!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
+                    // There is no operator already used
+                    if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
                         operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) / Int16.Parse(operation.operand2));
                     }
+                    // Left element was already used
+                    else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+
+                        operationsInCurrentLine[index].result = newOperand1 / Int16.Parse(operation.operand2);
+                    }
+                    // Right element was already used
+                    else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) / newOperand2;
+                    }
+                    // Both elements was already used
                     else
                     {
-                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) / Int16.Parse(operation.operand2);
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = newOperand1 / newOperand2;
                     }
 
-                break;
+                    printerLastExpressionResult = operationsInCurrentLine[index].result;
+
+                    break;
             }
         }
 
