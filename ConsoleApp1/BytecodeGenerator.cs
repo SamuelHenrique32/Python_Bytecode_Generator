@@ -82,6 +82,12 @@ namespace Analyzer
         public Boolean foundAnIdentifier = false;
 
         public int? printerLastExpressionResult = null;
+
+        // Stores the most right operation index already calculed with precedence 1
+        public int printerMoreToRightOperationIndexPrecedence1 = 0;
+
+        // Stores the most right operation index already calculed with precedence 2
+        public int printerMoreToRightOperationIndexPrecedence2 = 0;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -416,7 +422,7 @@ namespace Analyzer
                 for (int i = 0; i < operationsInCurrentLine.Count; i++)
                 {
                     // Precedence 2
-                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0))
+                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i>printerMoreToRightOperationIndexPrecedence2))
                     {
                         arithmeticOperation(operationsInCurrentLine[i], i);
 
@@ -425,10 +431,13 @@ namespace Analyzer
 
                         // Decrement because one operation was analyzed
                         quantityWithOperationWithMulPrecedence--;
+
+                        // Return to the left
+                        break;
                     }
 
                     // Precedence 1, just analyze if all level 2 precedencse was already analized
-                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0))
+                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i>printerMoreToRightOperationIndexPrecedence1))
                     {
                         arithmeticOperation(operationsInCurrentLine[i], i);
 
@@ -437,6 +446,9 @@ namespace Analyzer
 
                         // Decrement because one operation was analyzed
                         quantityWithOperationWithAddPrecedence--;
+
+                        // Return to the left
+                        break;
                     }
                 }
             }
@@ -464,8 +476,8 @@ namespace Analyzer
             int? operand1 = null;
             int? operand2 = null;
 
-            int? newOperand1 = null;
-            int? newOperand2 = null;
+            int? identifierOperand1 = null;
+            int? identifierOperand2 = null;
 
             // Verify if the first operand is identifier
             if (isIdentifier(operation.operand1))
@@ -474,7 +486,7 @@ namespace Analyzer
 
                 mountBytecode(currentLineInFile);
 
-                newOperand1 = getIdentifierValue(operation.operand1);
+                identifierOperand1 = getIdentifierValue(operation.operand1);
             }
 
             // Verify if the second operand is identifier
@@ -484,21 +496,21 @@ namespace Analyzer
 
                 mountBytecode(currentLineInFile);
 
-                newOperand2 = getIdentifierValue(operation.operand2);
+                identifierOperand2 = getIdentifierValue(operation.operand2);
             }
 
-            if (newOperand1 != null)
+            if (identifierOperand1 != null)
             {
-                operand1 = newOperand1;
+                operand1 = identifierOperand1;
             }
             else
             {
                 operand1 = Int16.Parse(operation.operand1);
             }
 
-            if (newOperand2 != null)
+            if (identifierOperand2 != null)
             {
-                operand2 = newOperand2;
+                operand2 = identifierOperand2;
             }
             else
             {
@@ -520,6 +532,10 @@ namespace Analyzer
                         operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
                         operationsInCurrentLine[index].result = operand1 + operand2;
+
+                        operationsInCurrentLine[index-1].result = operand1 + operand2;
+
+                        printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
@@ -527,6 +543,10 @@ namespace Analyzer
                         operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
                         operationsInCurrentLine[index].result = operand1 + operand2;
+
+                        operationsInCurrentLine[index+1].result = operand1 + operand2;
+
+                        printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Both elements was already used
                     else
@@ -546,63 +566,71 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) - Int16.Parse(operation.operand2));
+                        operationsInCurrentLine[index].result = operand1 - operand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = newOperand1 - Int16.Parse(operation.operand2);
+                        operationsInCurrentLine[index].result = operand1 - operand2;
+
+                        printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) - newOperand2;
+                        operationsInCurrentLine[index].result = operand1 - operand2;
+
+                        printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = newOperand1 - newOperand2;
+                        operationsInCurrentLine[index].result = operand1 - operand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
                 break;
 
-                case TipoTk.TkMultiplicaco:
+                case TipoTk.TkMultiplicacao:
 
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) * Int16.Parse(operation.operand2));
+                        operationsInCurrentLine[index].result = operand1 * operand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = newOperand1 * Int16.Parse(operation.operand2);
+                        operationsInCurrentLine[index].result = operand1 * operand2;
+
+                        printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) * newOperand2;
+                        operationsInCurrentLine[index].result = operand1 * operand2;
+
+                        printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = newOperand1 * newOperand2;
+                        operationsInCurrentLine[index].result = operand1 * operand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -614,29 +642,33 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) / Int16.Parse(operation.operand2));
+                        operationsInCurrentLine[index].result = operand1 / operand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = newOperand1 / Int16.Parse(operation.operand2);
+                        operationsInCurrentLine[index].result = operand1 / operand2;
+
+                        printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) / newOperand2;
+                        operationsInCurrentLine[index].result = operand1 / operand2;
+
+                        printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = newOperand1 / newOperand2;
+                        operationsInCurrentLine[index].result = operand1 / operand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -765,7 +797,7 @@ namespace Analyzer
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_PRECEDENCE));
                         break;
 
-                        case TipoTk.TkMultiplicaco:
+                        case TipoTk.TkMultiplicacao:
                             multiplicationOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_PRECEDENCE));
                         break;

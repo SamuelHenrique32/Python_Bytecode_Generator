@@ -277,7 +277,7 @@ namespace Analyzer
         //OPEXPP2 -> * | / | // | % | & | | | ~ | ^ | >> | <<
         int OPEXPP2()
         {
-            if (tk.tipo == TipoTk.TkMultiplicaco)
+            if (tk.tipo == TipoTk.TkMultiplicacao)
             {// *
                 tk = lex.getToken();
                 return 1;

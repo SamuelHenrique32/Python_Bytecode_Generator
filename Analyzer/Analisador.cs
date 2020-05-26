@@ -209,7 +209,7 @@ namespace Analyzer
             reservadas.Add("numconst", TipoTk.TkNumconst);
             reservadas.Add("%", TipoTk.TkPercent);
             reservadas.Add("%=", TipoTk.TkPorcentagemIgual);
-            reservadas.Add("*", TipoTk.TkMultiplicaco);
+            reservadas.Add("*", TipoTk.TkMultiplicacao);
             reservadas.Add("**=", TipoTk.TkAsteriscoAsteriscoIgual);
             reservadas.Add("/", TipoTk.TkDivisao);
             reservadas.Add("//", TipoTk.TkBarraBarra);
