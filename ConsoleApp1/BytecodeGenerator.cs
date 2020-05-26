@@ -1,6 +1,7 @@
 ﻿using Analyzer;
 using ConsoleApp1;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection.Emit;
@@ -73,14 +74,26 @@ namespace Analyzer
         public int idElementsCounter = 0;
 
         //--------------------------------------------------------------------------------------
-        // Boolean variables to control the bytecode mounting
-        public Boolean printLoadConst = false;
+        // Variables to control the bytecode mounting
+        public Boolean printerLoadConst = false;
 
-        public Boolean printSimpleAtrib = false;
+        public Boolean printerSimpleAtrib = false;
+
+        public int? printerLastExpressionResult = null;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
         {
+        }
+
+        public int getQuantityOfOperationsWithMulPrecedence()
+        {
+            return (multiplicationOperatorCounter + divOperatorCounter + reducedMultiplicationOperatorCounter + reducedDivOperatorCounter);
+        }
+
+        public int getQuantityOfOperationsWithAddPrecedence()
+        {
+            return (addOperatorCounter + subtractionOperatorCounter + reducedAddOperatorCounter + reducedSubtractionOperatorCounter);
         }
 
         public int getLastLineInFile()
@@ -236,9 +249,9 @@ namespace Analyzer
             // Prepares LOAD_CONST
 
             // Verify if it's necessary to load a constant
-            if (printLoadConst)
+            if (printerLoadConst)
             {
-                printLoadConst = false;
+                printerLoadConst = false;
 
                 BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
@@ -256,16 +269,16 @@ namespace Analyzer
                 bytecodeRegisterCurrentToken.stackPos = 0;
 
                 // If it's a simple atrib, it's necessary to load the operand 2
-                if (printSimpleAtrib)
+                if (printerSimpleAtrib)
                 {
-                    printSimpleAtrib = false;
+                    printerSimpleAtrib = false;
 
                     bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2.ToString() + ")";
                 }
                 // Load result
                 else
                 {
-                    bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].result.ToString() + ")";
+                    bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
                 }                
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);                
@@ -352,17 +365,39 @@ namespace Analyzer
         }
 
         public void handleLine(int line)
-        {
-            // Verify arithmetic operations with constants
-            for(int i=0; i<operationsInCurrentLine.Count; i++)
-            {
-                // Precedence 1
-                if(operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)
-                {
-                     arithmeticOperation(operationsInCurrentLine[i], i);
+        { 
+            int quantityWithOperationWithMulPrecedence = getQuantityOfOperationsWithMulPrecedence();
+            int quantityWithOperationWithAddPrecedence = getQuantityOfOperationsWithAddPrecedence();
 
-                    // It's necessary to show LOAD_CONST
-                    printLoadConst = true;
+            // Verify arithmetic operations with constants
+            // While there are operations to analyze
+            while((quantityWithOperationWithMulPrecedence>0) || (quantityWithOperationWithAddPrecedence>0))
+            {
+                for (int i = 0; i < operationsInCurrentLine.Count; i++)
+                {
+                    // Precedence 2
+                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0))
+                    {
+                        arithmeticOperation(operationsInCurrentLine[i], i);
+
+                        // It's necessary to show LOAD_CONST
+                        printerLoadConst = true;
+
+                        // Decrement because one operation was analyzed
+                        quantityWithOperationWithMulPrecedence--;
+                    }
+
+                    // Precedence 1, just analyze if all level 2 precedencse was already analized
+                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0))
+                    {
+                        arithmeticOperation(operationsInCurrentLine[i], i);
+
+                        // It's necessary to show LOAD_CONST
+                        printerLoadConst = true;
+
+                        // Decrement because one operation was analyzed
+                        quantityWithOperationWithAddPrecedence--;
+                    }
                 }
             }
 
@@ -373,9 +408,9 @@ namespace Analyzer
                 if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE) && (i == operationsInCurrentLine.Count-1))
                 {
                     // It's necessary to show LOAD_CONST
-                    printLoadConst = true;
+                    printerLoadConst = true;
 
-                    printSimpleAtrib = true;
+                    printerSimpleAtrib = true;
 
                     break;
                 }
@@ -386,41 +421,91 @@ namespace Analyzer
 
         public void arithmeticOperation(Operation operation, int index)
         {
+            int? newOperand1 = 0;
+            int? newOperand2 = 0;
+
             switch (operation.currentOperator)
             {
                 case TipoTk.TkMais:
 
-                    if(!verifyResultForLeftElement(operation.operand1Column))
+                    if(!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
                     {
                         operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) + Int16.Parse(operation.operand2));
                     }
                     else
                     {
-                        operationsInCurrentLine[index].result = getResultOfOperation(operation.operand1Column) + Int16.Parse(operation.operand2);
+                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) + Int16.Parse(operation.operand2);
                     }
                     
                 break;
 
                 case TipoTk.TkMenos:
 
-                    if (!verifyResultForLeftElement(operation.operand1Column))
+                    // There is no operator already used
+                    if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
                         operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) - Int16.Parse(operation.operand2));
                     }
+                    // Left element was already used
+                    else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+
+                        operationsInCurrentLine[index].result = newOperand1 - Int16.Parse(operation.operand2);
+                    }
+                    // Right element was already used
+                    else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
+                    {
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = Int16.Parse(operation.operand1) - newOperand2;
+                    }
+                    // Both elements was already used
                     else
                     {
-                        operationsInCurrentLine[index].result = getResultOfOperation(operation.operand1Column) - Int16.Parse(operation.operand2);
+                        newOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        newOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+
+                        operationsInCurrentLine[index].result = newOperand1 - newOperand2;
+                    }
+
+                    printerLastExpressionResult = operationsInCurrentLine[index].result;
+
+                    break;
+
+                case TipoTk.TkMultiplicaco:
+
+                    if (!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
+                    {
+                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) * Int16.Parse(operation.operand2));
+                    }
+                    else
+                    {
+                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) * Int16.Parse(operation.operand2);
+                    }
+                        
+                break;
+
+                case TipoTk.TkDivisao:
+
+                    if (!verifyResultForAlreadyUsedElement(operation.operand1Column, 1))
+                    {
+                        operationsInCurrentLine[index].result = (Int16.Parse(operation.operand1) / Int16.Parse(operation.operand2));
+                    }
+                    else
+                    {
+                        operationsInCurrentLine[index].result = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1) / Int16.Parse(operation.operand2);
                     }
 
                 break;
             }
         }
 
-        public int? getResultOfOperation(int elementColumn)
+        public int? getResultOfOperationWithAlreadyUsedElement(int elementColumn, int operandIndicator)
         {
             foreach (Operation op in operationsInCurrentLine)
             {
-                if (op.operand2Column == elementColumn)
+                if ((op.operand1Column == elementColumn) || (op.operand2Column == elementColumn))
                 {
                     if (op.result != null)
                     {
@@ -432,11 +517,12 @@ namespace Analyzer
             return 0;
         }
 
-        public Boolean verifyResultForLeftElement(int elementColumn)
+        public Boolean verifyResultForAlreadyUsedElement(int elementColumn, int operandIndicator)
         {
             foreach(Operation op in operationsInCurrentLine)
-            {                
-                if(op.operand2Column == elementColumn)
+            {
+                    
+                if ((op.operand1Column == elementColumn) || (op.operand2Column == elementColumn))
                 {
                     // There is a operation with this element thas was already calculated
                     if (op.result != null)
