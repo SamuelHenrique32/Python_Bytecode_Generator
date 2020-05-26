@@ -422,30 +422,32 @@ namespace Analyzer
                 for (int i = 0; i < operationsInCurrentLine.Count; i++)
                 {
                     // Precedence 2
-                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i>printerMoreToRightOperationIndexPrecedence2))
+                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i>printerMoreToRightOperationIndexPrecedence2) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE)))
                     {
-                        arithmeticOperation(operationsInCurrentLine[i], i);
+                        if(arithmeticOperation(operationsInCurrentLine[i], i))
+                        {
+                            // It's necessary to show LOAD_CONST
+                            printerLoadConst = true;
 
-                        // It's necessary to show LOAD_CONST
-                        printerLoadConst = true;
-
-                        // Decrement because one operation was analyzed
-                        quantityWithOperationWithMulPrecedence--;
+                            // Decrement because one operation was analyzed
+                            quantityWithOperationWithMulPrecedence--;
+                        }
 
                         // Return to the left
                         break;
                     }
 
                     // Precedence 1, just analyze if all level 2 precedencse was already analized
-                    if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i>printerMoreToRightOperationIndexPrecedence1))
+                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i>printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)))
                     {
-                        arithmeticOperation(operationsInCurrentLine[i], i);
+                        if(arithmeticOperation(operationsInCurrentLine[i], i))
+                        {
+                            // It's necessary to show LOAD_CONST
+                            printerLoadConst = true;
 
-                        // It's necessary to show LOAD_CONST
-                        printerLoadConst = true;
-
-                        // Decrement because one operation was analyzed
-                        quantityWithOperationWithAddPrecedence--;
+                            // Decrement because one operation was analyzed
+                            quantityWithOperationWithAddPrecedence--;
+                        }
 
                         // Return to the left
                         break;
@@ -471,7 +473,23 @@ namespace Analyzer
             mountBytecode(line);
         }
 
-        public void arithmeticOperation(Operation operation, int index)
+        // When found a identifier, it's necessary to verify if all left operations with precedence 1 was already done
+        public Boolean verifyLeftOperationsNotCalculated(int currentIndex, int operand1Column, int operand2Column)
+        {
+            for (int i = 0; i < currentIndex ; i++)
+            {
+                if((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (!(operationsInCurrentLine[i].alreadyVerified)) && (operationsInCurrentLine[i].operand2Column!=operand1Column))
+                {
+                    operationsInCurrentLine[i].calculateNow = true;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public Boolean arithmeticOperation(Operation operation, int index)
         {
             int? operand1 = null;
             int? operand2 = null;
@@ -482,6 +500,12 @@ namespace Analyzer
             // Verify if the first operand is identifier
             if (isIdentifier(operation.operand1))
             {
+                // Verify if all the operations to the left was already calculated
+                if (verifyLeftOperationsNotCalculated(index, operation.operand1Column, operation.operand2Column))
+                {
+                    return false;
+                }
+
                 foundAnIdentifier = true;
 
                 mountBytecode(currentLineInFile);
@@ -492,6 +516,12 @@ namespace Analyzer
             // Verify if the second operand is identifier
             if (isIdentifier(operation.operand2))
             {
+                // Verify if all the operations to the left was already calculated
+                if (verifyLeftOperationsNotCalculated(index, operation.operand1Column, operation.operand2Column))
+                {
+                    return false;
+                }
+
                 foundAnIdentifier = true;
 
                 mountBytecode(currentLineInFile);
@@ -559,6 +589,8 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
+                    operationsInCurrentLine[index].alreadyVerified = true;
+
                 break;
 
                 case TipoTk.TkMenos:
@@ -600,6 +632,8 @@ namespace Analyzer
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
+
+                    operationsInCurrentLine[index].alreadyVerified = true;
 
                 break;
 
@@ -643,6 +677,8 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
+                    operationsInCurrentLine[index].alreadyVerified = true;
+
                 break;
 
                 case TipoTk.TkDivisao:
@@ -685,8 +721,16 @@ namespace Analyzer
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
 
+                    operationsInCurrentLine[index].alreadyVerified = true;
+
                 break;
+
             }
+
+            this.operationsInCurrentLine[index].calculateNow = false;
+
+            // If reached here, result is true
+            return true;
         }
 
         public Boolean isIdentifier(String operand)

@@ -16,12 +16,17 @@ namespace Analyzer
 
         public int operand2Column;
 
+        public Boolean alreadyVerified;
+
         public TipoTk currentOperator;
 
         public OperationPrecedence precedence;
 
         // Nullable
-        public int? result = null;
+        public int? result;
+
+        // Force to calculate
+        public Boolean calculateNow;
 
         public Operation(String operand1, String operand2, int operand1Column, int operand2Column, TipoTk currentOperator, OperationPrecedence precedence)
         {
@@ -33,9 +38,15 @@ namespace Analyzer
 
             this.operand2Column = operand2Column;
 
+            this.alreadyVerified = false;
+
             this.currentOperator = currentOperator;
 
             this.precedence = precedence;
+
+            this.result = null;
+
+            this.calculateNow = false;
         }        
     }
 }
