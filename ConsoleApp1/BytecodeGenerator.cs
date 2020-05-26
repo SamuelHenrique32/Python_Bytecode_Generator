@@ -575,6 +575,8 @@ namespace Analyzer
 
                         operationsInCurrentLine[index].result = operand1 - operand2;
 
+                        operationsInCurrentLine[index - 1].result = operand1 - operand2;
+
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Right element was already used
@@ -583,6 +585,8 @@ namespace Analyzer
                         operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
                         operationsInCurrentLine[index].result = operand1 - operand2;
+
+                        operationsInCurrentLine[index + 1].result = operand1 - operand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
@@ -613,6 +617,8 @@ namespace Analyzer
 
                         operationsInCurrentLine[index].result = operand1 * operand2;
 
+                        operationsInCurrentLine[index - 1].result = operand1 * operand2;
+
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
@@ -621,6 +627,8 @@ namespace Analyzer
                         operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
                         operationsInCurrentLine[index].result = operand1 * operand2;
+
+                        operationsInCurrentLine[index + 1].result = operand1 * operand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
@@ -651,6 +659,8 @@ namespace Analyzer
 
                         operationsInCurrentLine[index].result = operand1 / operand2;
 
+                        operationsInCurrentLine[index - 1].result = operand1 / operand2;
+
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
@@ -659,6 +669,8 @@ namespace Analyzer
                         operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
                         operationsInCurrentLine[index].result = operand1 / operand2;
+
+                        operationsInCurrentLine[index + 1].result = operand1 / operand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
