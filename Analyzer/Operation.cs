@@ -32,9 +32,9 @@ namespace Analyzer
         {
             this.operand1 = operand1;
 
-            this.operand2 = operand2;
-
             this.operand1Column = operand1Column;
+
+            this.operand2 = operand2;            
 
             this.operand2Column = operand2Column;
 

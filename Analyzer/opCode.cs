@@ -9,7 +9,12 @@ namespace Analyzer
     public enum OpCode
     {
         LOAD_CONST,
+        LOAD_NAME,
         STORE_FAST,
-        STORE_NAME
+        STORE_NAME,        
+        BINARY_ADD,
+        BINARY_SUBTRACT,
+        BINARY_MULTIPLY,
+        BINARY_TRUE_DIVIDE
     }
 }
