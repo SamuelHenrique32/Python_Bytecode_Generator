@@ -496,13 +496,17 @@ namespace Analyzer
                     // Precedence 2
                     if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i>printerMoreToRightOperationIndexPrecedence2) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE)))
                     {
-                        if(arithmeticOperation(operationsInCurrentLine[i], i))
-                        {
-                            // It's necessary to show LOAD_CONST
-                            printerLoadConst = true;
+                        // It's necessary to show LOAD_CONST
+                        printerLoadConst = true;
 
+                        if (arithmeticOperation(operationsInCurrentLine[i], i))
+                        {
                             // Decrement because one operation was analyzed
                             quantityWithOperationWithMulPrecedence--;
+                        }
+                        else
+                        {
+                            printerLoadConst = false;
                         }
 
                         // Return to the left
@@ -512,13 +516,17 @@ namespace Analyzer
                     // Precedence 1, just analyze if all level 2 precedencse was already analized
                     if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i>printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)))
                     {
-                        if(arithmeticOperation(operationsInCurrentLine[i], i))
-                        {
-                            // It's necessary to show LOAD_CONST
-                            printerLoadConst = true;
+                        // It's necessary to show LOAD_CONST
+                        printerLoadConst = true;
 
+                        if (arithmeticOperation(operationsInCurrentLine[i], i))
+                        {
                             // Decrement because one operation was analyzed
                             quantityWithOperationWithAddPrecedence--;
+                        }
+                        else
+                        {
+                            printerLoadConst = false;
                         }
 
                         // Return to the left
@@ -899,7 +907,14 @@ namespace Analyzer
                     Console.Write("\t");
                 }
 
-                Console.Write(bytecodeRegister.offset + "  ");
+                if (bytecodeRegister.offset < 10)
+                {
+                    Console.Write(" " + bytecodeRegister.offset + "  ");
+                }
+                else
+                {
+                    Console.Write(bytecodeRegister.offset + "  ");
+                }
 
                 Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
 
