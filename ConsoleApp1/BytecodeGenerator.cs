@@ -264,6 +264,8 @@ namespace Analyzer
         public void mountBytecode(int currentLine, String identifier, Operation operation, int? value)
         {
             int? identifierValue = 0;
+            Boolean mustAddLoadConst = true;
+
             //--------------------------------------------------------------------------------------
             // Prepares LOAD_CONST
             if(printerAtribuition() && printerOperationsStack.Count >= 1)
@@ -326,14 +328,24 @@ namespace Analyzer
                     // Load result
                     else
                     {
-                        bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
+                        if (printerLastExpressionResult != null)
+                        {
+                            bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
 
-                        identifierValue = printerLastExpressionResult;
+                            identifierValue = printerLastExpressionResult;
 
-                        handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                            handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                        }
+                        else
+                        {
+                            mustAddLoadConst = false;
+                        }
                     }
 
-                    bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+                    if (mustAddLoadConst)
+                    {
+                        bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+                    }                    
                 }
             }            
             //--------------------------------------------------------------------------------------
