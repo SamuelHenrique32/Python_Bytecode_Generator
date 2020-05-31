@@ -341,7 +341,7 @@ namespace Analyzer
 
             int valueToVerifyInStack = 0;
 
-            if((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode))
+            if((!printerSimpleAtrib) && ((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode)))
             {
                 // Do nothing
             }
