@@ -96,6 +96,10 @@ namespace Analyzer
         public int printerMoreToRightOperationIndexPrecedence2 = 0;
 
         public Stack<int?> printerOperationsStack = new Stack<int?>();
+
+        public int? printerCompElementPosition = null;
+
+        public TipoTk printerCompElement;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -568,25 +572,16 @@ namespace Analyzer
             }
         }
 
-        public void handleLine(int line)
-        { 
-            int quantityWithOperationWithMulPrecedence = getQuantityOfOperationsWithMulPrecedence();
-            int quantityWithOperationWithAddPrecedence = getQuantityOfOperationsWithAddPrecedence();
-
-            // The line has an if statement
-            if (ifElementCounter > 0)
-            {
-
-            }
-
+        public void handleArithmeticalOperations(int quantityWithOperationWithMulPrecedence, int quantityWithOperationWithAddPrecedence)
+        {
             // Verify arithmetic operations with constants
             // While there are operations to analyze
-            while((quantityWithOperationWithMulPrecedence>0) || (quantityWithOperationWithAddPrecedence>0))
+            while ((quantityWithOperationWithMulPrecedence > 0) || (quantityWithOperationWithAddPrecedence > 0))
             {
                 for (int i = 0; i < operationsInCurrentLine.Count; i++)
                 {
                     // Precedence 2
-                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i>printerMoreToRightOperationIndexPrecedence2) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE)))
+                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i > printerMoreToRightOperationIndexPrecedence2) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE)))
                     {
                         // It's necessary to show LOAD_CONST
                         printerLoadConst = true;
@@ -606,7 +601,7 @@ namespace Analyzer
                     }
 
                     // Precedence 1, just analyze if all level 2 precedencse was already analized
-                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i>printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)))
+                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i > printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)))
                     {
                         // It's necessary to show LOAD_CONST
                         printerLoadConst = true;
@@ -631,7 +626,7 @@ namespace Analyzer
             for (int i = 0; i < operationsInCurrentLine.Count; i++)
             {
                 // Precedence -1 and it's the last operation in this line
-                if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE) && (i == operationsInCurrentLine.Count-1))
+                if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE) && (i == operationsInCurrentLine.Count - 1))
                 {
                     // It's necessary to show LOAD_CONST
                     printerLoadConst = true;
@@ -641,8 +636,59 @@ namespace Analyzer
                     break;
                 }
             }
+        }
 
+        public void handleLine(int line)
+        {
+            int quantityWithOperationWithMulPrecedence = getQuantityOfOperationsWithMulPrecedence();
+            int quantityWithOperationWithAddPrecedence = getQuantityOfOperationsWithAddPrecedence();
+
+            // The line has an if statement
+            if (ifElementCounter > 0)
+            {
+                verifyCompElement();
+
+                // There is one element in the left
+                if(operationsInCurrentLine[1].currentOperator == printerCompElement)
+                {
+                    if (isIdentifier(operationsInCurrentLine[1].operand1))
+                    {
+                        printerLoadName = true;
+
+                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, true);
+                    }
+                }
+            }
+
+            handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence);
+            
             mountBytecode(line, null, null, null, false);
+        }
+
+        private void verifyCompElement()
+        {
+            for (int i = 0; i < operationsInCurrentLine.Count; i++) {
+                if(operationsInCurrentLine[i].currentOperator == TipoTk.TkMaior)
+                {
+                    printerCompElement = TipoTk.TkMaior;
+                    break;
+                }
+                else if (operationsInCurrentLine[i].currentOperator == TipoTk.TkMenor)
+                {
+                    printerCompElement = TipoTk.TkMenor;
+                    break;
+                }
+                else if (operationsInCurrentLine[i].currentOperator == TipoTk.TkIgual)
+                {
+                    printerCompElement = TipoTk.TkIgual;
+                    break;
+                }
+                else if (operationsInCurrentLine[i].currentOperator == TipoTk.TkDiferente)
+                {
+                    printerCompElement = TipoTk.TkDiferente;
+                    break;
+                }
+            }
         }
 
         // When found a identifier, it's necessary to verify if all left operations with precedence 1 was already done
@@ -1201,7 +1247,7 @@ namespace Analyzer
 
                         case TipoTk.TkSe:
                             ifElementCounter++;
-                            operationsInCurrentLine.Add(new Operation(null, null, -1, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_IF_ATTRIBUTION_PRECEDENCE));
+                            operationsInCurrentLine.Add(new Operation(null, null, lexicalTokens[i - 1].coluna, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_IF_ATTRIBUTION_PRECEDENCE));
                         break;
                     }
                 }
