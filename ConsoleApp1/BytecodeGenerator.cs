@@ -136,6 +136,8 @@ namespace Analyzer
         public int? printerCompElementPosition = null;
 
         public TipoTk printerCompElement;
+
+        public int? printerLastCompLine = null;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -348,7 +350,7 @@ namespace Analyzer
             else
             {
                 // Verify if it's necessary to load a constant
-                if (printerLoadConst || printerOperationsStack.Count <= 1)
+                if ((currentLine != printerLastCompLine) && (printerLoadConst || printerOperationsStack.Count <= 1))
                 {
                     BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
@@ -393,9 +395,11 @@ namespace Analyzer
                         {
                             bytecodeRegisterCurrentToken.preview = "(" + operation.operand2 + ")";
 
-                            identifierValue = Int16.Parse(operation.operand2);
+                            //identifierValue = Int16.Parse(operation.operand2);
+                            identifierValue = valueToVerifyInStack;
 
-                            handleStack(OpCode.LOAD_CONST, Int16.Parse(operation.operand2));
+                            //handleStack(OpCode.LOAD_CONST, Int16.Parse(operation.operand2));
+                            handleStack(OpCode.LOAD_CONST, identifierValue);
                         }
                         // Load result
                         else
@@ -554,6 +558,8 @@ namespace Analyzer
 
             if (printerShowCompareOp)
             {
+                printerLastCompLine = currentLine;
+
                 handleStack(OpCode.COMPARE_OP, null);
 
                 BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
@@ -779,6 +785,8 @@ namespace Analyzer
         {
             int quantityWithOperationWithMulPrecedence = getQuantityOfOperationsWithMulPrecedence();
             int quantityWithOperationWithAddPrecedence = getQuantityOfOperationsWithAddPrecedence();
+            printerMoreToRightOperationIndexPrecedence1 = 0;
+            printerMoreToRightOperationIndexPrecedence2 = 0;
 
             // The line has an if statement
             if (ifElementCounter > 0)
@@ -1336,7 +1344,8 @@ namespace Analyzer
                 break;
 
                 case OpCode.COMPARE_OP:
-                    // What to do?
+                    printerOperationsStack.Pop();
+                    printerOperationsStack.Pop();
                 break;
 
                 case OpCode.POP_JUMP_IF_FALSE:
