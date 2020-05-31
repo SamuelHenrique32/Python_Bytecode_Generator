@@ -87,6 +87,10 @@ namespace Analyzer
 
         public Boolean printerShowOperationType = false;
 
+        public Boolean printerShowCompareOp = false;
+
+        public Boolean printerPopJumpIfFalse = false;
+
         public int? printerLastExpressionResult = null;
 
         // Stores the most right operation index already calculed with precedence 1
@@ -267,7 +271,7 @@ namespace Analyzer
             return lexicalTokens[currentPos + 1];
         }
 
-        public void mountBytecode(int currentLine, String identifier, Operation operation, int? value, Boolean mustAddIdentifier)
+        public void mountBytecode(int currentLine, String identifier, Operation operation, int? value, Boolean mustAddIdentifier, Boolean restrictedOpCode)
         {
             int? identifierValue = 0;
             Boolean mustAddLoadConst = true;
@@ -485,6 +489,79 @@ namespace Analyzer
             }
             //--------------------------------------------------------------------------------------
 
+            //--------------------------------------------------------------------------------------
+            // Prepares comparison
+
+            if (printerShowCompareOp)
+            {
+                handleStack(OpCode.COMPARE_OP, null);
+
+                BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
+
+                bytecodeRegisterForAttribuition.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+                bytecodeRegisterForAttribuition.lineInFile = currentLine;
+
+                bytecodeRegisterForAttribuition.offset = currentOffset;
+
+                this.currentOffset += 2;
+
+                bytecodeRegisterForAttribuition.opCode = (int)OpCode.COMPARE_OP;
+
+                // TODO
+                bytecodeRegisterForAttribuition.stackPos = 0;
+
+                if(printerCompElement == TipoTk.TkMaior)
+                {
+                    bytecodeRegisterForAttribuition.preview = "(>)";
+                }
+                else if (printerCompElement == TipoTk.TkMenor)
+                {
+                    bytecodeRegisterForAttribuition.preview = "(<)";
+                }
+                else if (printerCompElement == TipoTk.TkIgual)
+                {
+                    bytecodeRegisterForAttribuition.preview = "(==)";
+                }
+                else if (printerCompElement == TipoTk.TkDiferente)
+                {
+                    bytecodeRegisterForAttribuition.preview = "(!=)";
+                }
+
+                bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
+
+                printerShowCompareOp = false;
+            }
+            //--------------------------------------------------------------------------------------
+
+            //--------------------------------------------------------------------------------------
+            // Prepares POP_JUMP_IF_FALSE
+            if (printerPopJumpIfFalse)
+            {
+                BytecodeRegister bytecodeRegisterForJumpIfFalse = new BytecodeRegister();
+
+                bytecodeRegisterForJumpIfFalse.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+                bytecodeRegisterForJumpIfFalse.lineInFile = currentLine;
+
+                bytecodeRegisterForJumpIfFalse.offset = currentOffset;
+
+                this.currentOffset += 2;
+
+                handleStack(OpCode.POP_JUMP_IF_FALSE, null);
+
+                bytecodeRegisterForJumpIfFalse.opCode = (int)OpCode.POP_JUMP_IF_FALSE;
+
+                // TODO
+                bytecodeRegisterForJumpIfFalse.stackPos = 0;
+
+                bytecodeRegisters.Add(bytecodeRegisterForJumpIfFalse);
+
+                printerPopJumpIfFalse = false;
+            }
+
+            //--------------------------------------------------------------------------------------
+
             printerFoundAnIdentifier = false;
 
             printerShowOperationType = false;
@@ -651,18 +728,71 @@ namespace Analyzer
                 // There is one element in the left
                 if(operationsInCurrentLine[1].currentOperator == printerCompElement)
                 {
+                    // It's an identifier
                     if (isIdentifier(operationsInCurrentLine[1].operand1))
                     {
                         printerLoadName = true;
 
-                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, true);
+                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+
+                        printerLoadName = false;
+                    }
+                    // It's a const
+                    else
+                    {
+                        printerLoadConst = true;
+
+                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, true, true);
+
+                        printerLoadConst = false;
                     }
                 }
+                else
+                {
+                    // Code something here
+                }
+
+                // There is one element in the right
+                if (operationsInCurrentLine[operationsInCurrentLine.Count-1].currentOperator == printerCompElement)
+                {
+                    // It's an identifier
+                    if (isIdentifier(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2))
+                    {
+                        printerLoadName = true;
+
+                        mountBytecode(line, operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2, null, null, false, true);
+
+                        printerLoadName = false;
+                    }
+                    // It's a const
+                    else
+                    {
+                        printerLoadConst = true;
+
+                        mountBytecode(line, operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2, null, null, true, true);
+
+                        printerLoadConst = false;
+                    }
+                }
+                else
+                {
+                    // Code something here
+                }
+
+                printerShowCompareOp = true;
+
+                mountBytecode(line, null, null, null, false, true);
+
+                printerPopJumpIfFalse = true;
+
+                mountBytecode(line, null, null, null, false, true);
+            }
+            else
+            {
+                handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence);
             }
 
-            handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence);
-            
-            mountBytecode(line, null, null, null, false);
+            mountBytecode(line, null, null, null, false, true);
         }
 
         private void verifyCompElement()
@@ -732,7 +862,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand1, null, null, false);
+                    mountBytecode(currentLineInFile, operation.operand1, null, null, false, false);
                 }
 
                 identifierOperand1 = getIdentifierValue(operation.operand1);
@@ -748,7 +878,7 @@ namespace Analyzer
                     {
                         printerLoadName = true;
 
-                        mountBytecode(currentLineInFile, operation.operand1, null, null, false);
+                        mountBytecode(currentLineInFile, operation.operand1, null, null, false, false);
 
                         printerLoadName = false;
 
@@ -758,7 +888,7 @@ namespace Analyzer
                     {
                         printerLoadConst = true;
 
-                        mountBytecode(currentLineInFile, operation.operand1, null, null, true);
+                        mountBytecode(currentLineInFile, operation.operand1, null, null, true, false);
 
                         printerLoadConst = false; ;
 
@@ -780,7 +910,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand2, null, null, false);
+                    mountBytecode(currentLineInFile, operation.operand2, null, null, false, false);
                 }
 
                 identifierOperand2 = getIdentifierValue(operation.operand2);
@@ -993,7 +1123,7 @@ namespace Analyzer
 
                 printerLoadConst = false;
 
-                mountBytecode(currentLineInFile, null, operation, printerLastExpressionResult, false);
+                mountBytecode(currentLineInFile, null, operation, printerLastExpressionResult, false, false);
             }
 
             // If reached here, result is true
@@ -1079,7 +1209,15 @@ namespace Analyzer
                     Console.Write(bytecodeRegister.offset + "  ");
                 }
 
-                Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
+                if(bytecodeRegister.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
+                }
+                else
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
+                }
+                
 
                 if (bytecodeRegister.opCode!=(int)OpCode.BINARY_ADD && bytecodeRegister.opCode!=(int)OpCode.BINARY_SUBTRACT && bytecodeRegister.opCode!=(int)OpCode.BINARY_MULTIPLY && bytecodeRegister.opCode!=(int)OpCode.BINARY_TRUE_DIVIDE)
                 {
@@ -1123,6 +1261,14 @@ namespace Analyzer
                     printerOperationsStack.Pop();
                     printerOperationsStack.Push(value);
                 break;
+
+                case OpCode.COMPARE_OP:
+                    // What to do?
+                break;
+
+                case OpCode.POP_JUMP_IF_FALSE:
+                    // What to do?
+                break;
             }
         }
 
@@ -1160,6 +1306,14 @@ namespace Analyzer
 
                 case 7:
                     return "BINARY_TRUE_DIVIDE";
+                break;
+
+                case 8:
+                    return "COMPARE_OP";
+                break;
+
+                case 9:
+                    return "POP_JUMP_IF_FALSE";
                 break;
             }
 

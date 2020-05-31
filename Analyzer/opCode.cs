@@ -15,6 +15,8 @@ namespace Analyzer
         BINARY_ADD,
         BINARY_SUBTRACT,
         BINARY_MULTIPLY,
-        BINARY_TRUE_DIVIDE
+        BINARY_TRUE_DIVIDE,
+        COMPARE_OP,
+        POP_JUMP_IF_FALSE
     }
 }
