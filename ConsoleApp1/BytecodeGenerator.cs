@@ -41,6 +41,8 @@ namespace Analyzer
 
         public List<Operation> operationsInCurrentLine = new List<Operation>();
 
+        public int operationRelationalPosInCurrentLine = 0;
+
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
@@ -74,6 +76,26 @@ namespace Analyzer
         public int idElementsCounter = 0;
 
         public int ifElementCounter = 0;
+
+        //--------------------------------------------------------------------------------------
+        // Elements in line counter for if statements
+        public int addOperatorCounterLeft = 0;
+
+        public int addOperatorCounterRight = 0;
+
+        public int subtractionOperatorCounterLeft = 0;
+
+        public int subtractionOperatorCounterRight = 0;
+
+        public int multiplicationOperatorCounterLeft = 0;
+
+        public int multiplicationOperatorCounterRight = 0;
+
+        public int divOperatorCounterLeft = 0;
+
+        public int divOperatorCounterRight = 0;
+
+        //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
         // Variables to control the bytecode mounting
@@ -787,6 +809,7 @@ namespace Analyzer
 
                 mountBytecode(line, null, null, null, false, true);
             }
+            // Common arithmetical operation
             else
             {
                 handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence);
@@ -1330,23 +1353,83 @@ namespace Analyzer
                     switch (lexicalTokens[i].tipo)
                     {
                         case TipoTk.TkMais:
+
+                            if (ifElementCounter > 0)
+                            {
+                                if((equalOperatorCounter>0) || (difOperatorCounter>0) || (lessThanOperatorCounter>0) || (biggerThanOperatorCounter>0))
+                                {
+                                    addOperatorCounterRight++;
+                                }
+                                else
+                                {
+                                    addOperatorCounterLeft++;
+                                }                                
+                            }
+
                             addOperatorCounter++;
+
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i-1].valor, lexicalTokens[i+1].valor, lexicalTokens[i-1].coluna, lexicalTokens[i+1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_PRECEDENCE));
+
                         break;
 
                         case TipoTk.TkMenos:
+
+                            if (ifElementCounter > 0)
+                            {
+                                if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
+                                {
+                                    subtractionOperatorCounterRight++;
+                                }
+                                else
+                                {
+                                    subtractionOperatorCounterLeft++;
+                                }
+                            }
+
                             subtractionOperatorCounter++;
+
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_PRECEDENCE));
+
                         break;
 
                         case TipoTk.TkMultiplicacao:
+
+                            if (ifElementCounter > 0)
+                            {
+                                if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
+                                {
+                                    multiplicationOperatorCounterRight++;
+                                }
+                                else
+                                {
+                                    multiplicationOperatorCounterLeft++;
+                                }
+                            }
+
                             multiplicationOperatorCounter++;
+
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_PRECEDENCE));
+
                         break;
 
                         case TipoTk.TkDivisao:
+
+                            if (ifElementCounter > 0)
+                            {
+                                if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
+                                {
+                                    divOperatorCounterRight++;
+                                }
+                                else
+                                {
+                                    divOperatorCounterLeft++;
+                                }
+                            }
+
                             divOperatorCounter++;
+
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIV_PRECEDENCE));
+
                         break;
 
                         case TipoTk.TkMaisIgual:
@@ -1372,21 +1455,33 @@ namespace Analyzer
                         case TipoTk.TkIgual:
                             equalOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_EQUAL_PRECEDENCE));
+
+                            operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
+
                         break;
 
                         case TipoTk.TkDiferente:
                             difOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIFF_PRECEDENCE));
+
+                            operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
+
                         break;
 
                         case TipoTk.TkMenor:
                             lessThanOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_LESS_THAN_PRECEDENCE));
+
+                            operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
+
                         break;
 
                         case TipoTk.TkMaior:
                             biggerThanOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_BIGGER_THAN_PRECEDENCE));
+
+                            operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
+
                         break;
                         
                         case TipoTk.TkAtrib:
@@ -1441,6 +1536,24 @@ namespace Analyzer
             idElementsCounter = 0;
 
             ifElementCounter = 0;
+
+            addOperatorCounterLeft = 0;
+
+            addOperatorCounterRight = 0;
+
+            subtractionOperatorCounterLeft = 0;
+
+            subtractionOperatorCounterRight = 0;
+
+            multiplicationOperatorCounterLeft = 0;
+
+            multiplicationOperatorCounterRight = 0;
+
+            divOperatorCounterLeft = 0;
+
+            divOperatorCounterRight = 0;
+
+            operationRelationalPosInCurrentLine = 0;
         }
     }    
 }
