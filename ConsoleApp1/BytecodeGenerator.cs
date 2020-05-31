@@ -341,7 +341,7 @@ namespace Analyzer
 
             int valueToVerifyInStack = 0;
 
-            if(printerAtribuition() && printerOperationsStack.Count >= 1)
+            if((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode))
             {
                 // Do nothing
             }
@@ -983,7 +983,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand2, null, null, false, false);
+                    mountBytecode(currentLineInFile, operation.operand2, null, null, false, true);
                 }
 
                 arithmeticalIdentifierOperand2 = getIdentifierValue(operation.operand2);
