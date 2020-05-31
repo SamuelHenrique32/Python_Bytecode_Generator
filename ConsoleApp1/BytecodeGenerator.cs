@@ -73,6 +73,8 @@ namespace Analyzer
 
         public int idElementsCounter = 0;
 
+        public int ifElementCounter = 0;
+
         //--------------------------------------------------------------------------------------
         // Variables to control the bytecode mounting
         public Boolean printerLoadConst = false;
@@ -261,13 +263,16 @@ namespace Analyzer
             return lexicalTokens[currentPos + 1];
         }
 
-        public void mountBytecode(int currentLine, String identifier, Operation operation, int? value)
+        public void mountBytecode(int currentLine, String identifier, Operation operation, int? value, Boolean mustAddIdentifier)
         {
             int? identifierValue = 0;
             Boolean mustAddLoadConst = true;
 
             //--------------------------------------------------------------------------------------
             // Prepares LOAD_CONST
+
+            int valueToVerifyInStack = 0;
+
             if(printerAtribuition() && printerOperationsStack.Count >= 1)
             {
                 // Do nothing
@@ -307,7 +312,16 @@ namespace Analyzer
                     }
                     else if (printerShowOperationType)
                     {
-                        if (!printerOperationsStack.Contains(Int16.Parse(operation.operand2)))
+                        if (isIdentifier(operation.operand2))
+                        {
+                            valueToVerifyInStack = (int)getIdentifierValue(operation.operand2);
+                        }
+                        else
+                        {
+                            valueToVerifyInStack = Int16.Parse(operation.operand2);
+                        }
+
+                        if (!printerOperationsStack.Contains(valueToVerifyInStack))
                         {
                             bytecodeRegisterCurrentToken.preview = "(" + operation.operand2 + ")";
 
@@ -328,18 +342,27 @@ namespace Analyzer
                     // Load result
                     else
                     {
-                        if (printerLastExpressionResult != null)
+                        if (mustAddIdentifier)
                         {
-                            bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
+                            bytecodeRegisterCurrentToken.preview = "(" + identifier.ToString() + ")";
 
-                            identifierValue = printerLastExpressionResult;
-
-                            handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                            handleStack(OpCode.LOAD_CONST, Int16.Parse(identifier));
                         }
                         else
                         {
-                            mustAddLoadConst = false;
-                        }
+                            if (printerLastExpressionResult != null)
+                            {
+                                bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
+
+                                identifierValue = printerLastExpressionResult;
+
+                                handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                            }
+                            else
+                            {
+                                mustAddLoadConst = false;
+                            }
+                        }                        
                     }
 
                     if (mustAddLoadConst)
@@ -352,7 +375,7 @@ namespace Analyzer
 
             //--------------------------------------------------------------------------------------
             // Prepares LOAD_NAME
-            if (printerLoadName)
+            if (printerLoadName && !mustAddIdentifier)
             {
                 handleStack(OpCode.LOAD_NAME, getIdentifierValue(identifier));
 
@@ -382,7 +405,7 @@ namespace Analyzer
 
             //--------------------------------------------------------------------------------------
             // Prepares to show operation type
-            if (printerShowOperationType)
+            if (printerShowOperationType && !mustAddIdentifier)
             {
                 BytecodeRegister bytecodeRegisterForAttribuition = new BytecodeRegister();
 
@@ -428,7 +451,7 @@ namespace Analyzer
             // Prepares attribuition
 
             // If there is a attribuition
-            if (printerAtribuition())
+            if (printerAtribuition() && !mustAddIdentifier)
             {
                 handleStack(OpCode.STORE_NAME, value);
 
@@ -550,6 +573,12 @@ namespace Analyzer
             int quantityWithOperationWithMulPrecedence = getQuantityOfOperationsWithMulPrecedence();
             int quantityWithOperationWithAddPrecedence = getQuantityOfOperationsWithAddPrecedence();
 
+            // The line has an if statement
+            if (ifElementCounter > 0)
+            {
+
+            }
+
             // Verify arithmetic operations with constants
             // While there are operations to analyze
             while((quantityWithOperationWithMulPrecedence>0) || (quantityWithOperationWithAddPrecedence>0))
@@ -613,7 +642,7 @@ namespace Analyzer
                 }
             }
 
-            mountBytecode(line, null, null, null);
+            mountBytecode(line, null, null, null, false);
         }
 
         // When found a identifier, it's necessary to verify if all left operations with precedence 1 was already done
@@ -657,7 +686,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand1, null, null);
+                    mountBytecode(currentLineInFile, operation.operand1, null, null, false);
                 }
 
                 identifierOperand1 = getIdentifierValue(operation.operand1);
@@ -666,6 +695,31 @@ namespace Analyzer
             // Verify if the second operand is identifier
             if (isIdentifier(operation.operand2))
             {
+                // It's necessary to load the first element
+                if(printerOperationsStack.Count == 0)
+                {
+                    if (identifierOperand1 != null)
+                    {
+                        printerLoadName = true;
+
+                        mountBytecode(currentLineInFile, operation.operand1, null, null, false);
+
+                        printerLoadName = false;
+
+                        operand1 = identifierOperand1;
+                    }
+                    else
+                    {
+                        printerLoadConst = true;
+
+                        mountBytecode(currentLineInFile, operation.operand1, null, null, true);
+
+                        printerLoadConst = false; ;
+
+                        operand1 = Int16.Parse(operation.operand1);
+                    }
+                }
+
                 // Verify if all the operations to the left was already calculated
                 if (verifyLeftOperationsNotCalculated(index, operation.operand1Column, operation.operand2Column))
                 {
@@ -680,7 +734,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand2, null, null);
+                    mountBytecode(currentLineInFile, operation.operand2, null, null, false);
                 }
 
                 identifierOperand2 = getIdentifierValue(operation.operand2);
@@ -893,7 +947,7 @@ namespace Analyzer
 
                 printerLoadConst = false;
 
-                mountBytecode(currentLineInFile, null, operation, printerLastExpressionResult);
+                mountBytecode(currentLineInFile, null, operation, printerLastExpressionResult, false);
             }
 
             // If reached here, result is true
@@ -1145,6 +1199,10 @@ namespace Analyzer
                             verifyTkId(lexicalTokens[i]);
                         break;
 
+                        case TipoTk.TkSe:
+                            ifElementCounter++;
+                            operationsInCurrentLine.Add(new Operation(null, null, -1, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_IF_ATTRIBUTION_PRECEDENCE));
+                        break;
                     }
                 }
             }
@@ -1181,6 +1239,8 @@ namespace Analyzer
             operationsInCurrentLine.Clear();
 
             idElementsCounter = 0;
+
+            ifElementCounter = 0;
         }
     }    
 }
