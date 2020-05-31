@@ -46,6 +46,16 @@ namespace Analyzer
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
+        // Arithmetical operations
+        int? arithmeticalOperand1 = null;
+        int? arithmeticalOperand2 = null;
+
+        int? arithmeticalIdentifierOperand1 = null;
+        int? arithmeticalIdentifierOperand2 = null;
+
+        //--------------------------------------------------------------------------------------
+
+        //--------------------------------------------------------------------------------------
         // Elements in line counter
         public int addOperatorCounter = 0;
 
@@ -140,6 +150,34 @@ namespace Analyzer
         public int getQuantityOfOperationsWithAddPrecedence()
         {
             return (addOperatorCounter + subtractionOperatorCounter + reducedAddOperatorCounter + reducedSubtractionOperatorCounter);
+        }
+
+        public int getQuantityOfOperationsWithMulPrecedenceIfStatement(Boolean leftRightOption)
+        {
+            // Right
+            if (leftRightOption)
+            {
+                return (multiplicationOperatorCounterRight + divOperatorCounterRight);
+            }
+            // Left
+            else
+            {
+                return (multiplicationOperatorCounterLeft + divOperatorCounterLeft);
+            }
+        }
+
+        public int getQuantityOfOperationsWithAddPrecedenceIfStatement(Boolean leftRightOption)
+        {
+            // Right
+            if (leftRightOption)
+            {
+                return (addOperatorCounterRight + subtractionOperatorCounterRight);
+            }
+            // Left
+            else
+            {
+                return (addOperatorCounterLeft + subtractionOperatorCounterLeft);
+            }
         }
 
         public int getLastLineInFile()
@@ -671,13 +709,13 @@ namespace Analyzer
             }
         }
 
-        public void handleArithmeticalOperations(int quantityWithOperationWithMulPrecedence, int quantityWithOperationWithAddPrecedence)
+        public void handleArithmeticalOperations(int quantityWithOperationWithMulPrecedence, int quantityWithOperationWithAddPrecedence, int bottomLimit, int topLimit)
         {
             // Verify arithmetic operations with constants
             // While there are operations to analyze
             while ((quantityWithOperationWithMulPrecedence > 0) || (quantityWithOperationWithAddPrecedence > 0))
             {
-                for (int i = 0; i < operationsInCurrentLine.Count; i++)
+                for (int i = bottomLimit; i < topLimit; i++)
                 {
                     // Precedence 2
                     if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE) && (quantityWithOperationWithMulPrecedence != 0) && (i > printerMoreToRightOperationIndexPrecedence2) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_MUL_PRECEDENCE)))
@@ -722,7 +760,7 @@ namespace Analyzer
             }
 
             // Simple atrib
-            for (int i = 0; i < operationsInCurrentLine.Count; i++)
+            for (int i = bottomLimit; i < topLimit; i++)
             {
                 // Precedence -1 and it's the last operation in this line
                 if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE) && (i == operationsInCurrentLine.Count - 1))
@@ -748,7 +786,7 @@ namespace Analyzer
                 verifyCompElement();
 
                 // There is one element in the left
-                if(operationsInCurrentLine[1].currentOperator == printerCompElement)
+                if (operationsInCurrentLine[1].currentOperator == printerCompElement)
                 {
                     // It's an identifier
                     if (isIdentifier(operationsInCurrentLine[1].operand1))
@@ -771,7 +809,17 @@ namespace Analyzer
                 }
                 else
                 {
-                    // Code something here
+                    // Expression in the left
+                    int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(false);
+                    int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(false);
+
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, 1, operationRelationalPosInCurrentLine);
+
+                    // If the operands aren't null, the bytecode element was already added
+                    if(arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
+                    {
+                        mountBytecode(line, null, null, null, false, true);
+                    }
                 }
 
                 // There is one element in the right
@@ -798,7 +846,9 @@ namespace Analyzer
                 }
                 else
                 {
-                    // Code something here
+                    // Expression in the right
+                    int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(true);
+                    int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(true);
                 }
 
                 printerShowCompareOp = true;
@@ -812,7 +862,7 @@ namespace Analyzer
             // Common arithmetical operation
             else
             {
-                handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence);
+                handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence, 0, operationsInCurrentLine.Count);
             }
 
             mountBytecode(line, null, null, null, false, true);
@@ -862,11 +912,11 @@ namespace Analyzer
 
         public Boolean arithmeticOperation(Operation operation, int index)
         {
-            int? operand1 = null;
-            int? operand2 = null;
+            arithmeticalOperand1 = null;
+            arithmeticalOperand2 = null;
 
-            int? identifierOperand1 = null;
-            int? identifierOperand2 = null;
+            arithmeticalIdentifierOperand1 = null;
+            arithmeticalIdentifierOperand2 = null;
 
             // Verify if the first operand is identifier
             if (isIdentifier(operation.operand1))
@@ -888,7 +938,7 @@ namespace Analyzer
                     mountBytecode(currentLineInFile, operation.operand1, null, null, false, false);
                 }
 
-                identifierOperand1 = getIdentifierValue(operation.operand1);
+                arithmeticalIdentifierOperand1 = getIdentifierValue(operation.operand1);
             }
 
             // Verify if the second operand is identifier
@@ -897,7 +947,7 @@ namespace Analyzer
                 // It's necessary to load the first element
                 if(printerOperationsStack.Count == 0)
                 {
-                    if (identifierOperand1 != null)
+                    if (arithmeticalIdentifierOperand1 != null)
                     {
                         printerLoadName = true;
 
@@ -905,7 +955,7 @@ namespace Analyzer
 
                         printerLoadName = false;
 
-                        operand1 = identifierOperand1;
+                        arithmeticalOperand1 = arithmeticalIdentifierOperand1;
                     }
                     else
                     {
@@ -915,7 +965,7 @@ namespace Analyzer
 
                         printerLoadConst = false; ;
 
-                        operand1 = Int16.Parse(operation.operand1);
+                        arithmeticalOperand1 = Int16.Parse(operation.operand1);
                     }
                 }
 
@@ -936,25 +986,25 @@ namespace Analyzer
                     mountBytecode(currentLineInFile, operation.operand2, null, null, false, false);
                 }
 
-                identifierOperand2 = getIdentifierValue(operation.operand2);
+                arithmeticalIdentifierOperand2 = getIdentifierValue(operation.operand2);
             }
 
-            if (identifierOperand1 != null)
+            if (arithmeticalIdentifierOperand1 != null)
             {
-                operand1 = identifierOperand1;
+                arithmeticalOperand1 = arithmeticalIdentifierOperand1;
             }
             else
             {
-                operand1 = Int16.Parse(operation.operand1);
+                arithmeticalOperand1 = Int16.Parse(operation.operand1);
             }
 
-            if (identifierOperand2 != null)
+            if (arithmeticalIdentifierOperand2 != null)
             {
-                operand2 = identifierOperand2;
+                arithmeticalOperand2 = arithmeticalIdentifierOperand2;
             }
             else
             {
-                operand2 = Int16.Parse(operation.operand2);
+                arithmeticalOperand2 = Int16.Parse(operation.operand2);
             }
 
             switch (operation.currentOperator)
@@ -964,37 +1014,37 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = operand1 + operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = operand1 + operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
 
-                        operationsInCurrentLine[index-1].result = operand1 + operand2;
+                        operationsInCurrentLine[index-1].result = arithmeticalOperand1 + arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 + operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
 
-                        operationsInCurrentLine[index+1].result = operand1 + operand2;
+                        operationsInCurrentLine[index+1].result = arithmeticalOperand1 + arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 + operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -1008,37 +1058,37 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = operand1 - operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 - arithmeticalOperand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = operand1 - operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 - arithmeticalOperand2;
 
-                        operationsInCurrentLine[index - 1].result = operand1 - operand2;
+                        operationsInCurrentLine[index - 1].result = arithmeticalOperand1 - arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 - operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 - arithmeticalOperand2;
 
-                        operationsInCurrentLine[index + 1].result = operand1 - operand2;
+                        operationsInCurrentLine[index + 1].result = arithmeticalOperand1 - arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 - operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 - arithmeticalOperand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -1052,37 +1102,37 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = operand1 * operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 * arithmeticalOperand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = operand1 * operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 * arithmeticalOperand2;
 
-                        operationsInCurrentLine[index - 1].result = operand1 * operand2;
+                        operationsInCurrentLine[index - 1].result = arithmeticalOperand1 * arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 * operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 * arithmeticalOperand2;
 
-                        operationsInCurrentLine[index + 1].result = operand1 * operand2;
+                        operationsInCurrentLine[index + 1].result = arithmeticalOperand1 * arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 * operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 * arithmeticalOperand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -1096,37 +1146,37 @@ namespace Analyzer
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operationsInCurrentLine[index].result = operand1 / operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 / arithmeticalOperand2;
                     }
                     // Left element was already used
                     else if ((verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
 
-                        operationsInCurrentLine[index].result = operand1 / operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 / arithmeticalOperand2;
 
-                        operationsInCurrentLine[index - 1].result = operand1 / operand2;
+                        operationsInCurrentLine[index - 1].result = arithmeticalOperand1 / arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Right element was already used
                     else if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
                     {
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 / operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 / arithmeticalOperand2;
 
-                        operationsInCurrentLine[index + 1].result = operand1 / operand2;
+                        operationsInCurrentLine[index + 1].result = arithmeticalOperand1 / arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence2 = index;
                     }
                     // Both elements was already used
                     else
                     {
-                        operand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
-                        operand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
+                        arithmeticalOperand1 = getResultOfOperationWithAlreadyUsedElement(operation.operand1Column, 1);
+                        arithmeticalOperand2 = getResultOfOperationWithAlreadyUsedElement(operation.operand2Column, 2);
 
-                        operationsInCurrentLine[index].result = operand1 / operand2;
+                        operationsInCurrentLine[index].result = arithmeticalOperand1 / arithmeticalOperand2;
                     }
 
                     printerLastExpressionResult = operationsInCurrentLine[index].result;
@@ -1140,7 +1190,7 @@ namespace Analyzer
             this.operationsInCurrentLine[index].calculateNow = false;
 
             // If a identifier was used, it's necessary to mount the operation
-            if((identifierOperand1!=null) || (identifierOperand2 != null))
+            if((arithmeticalIdentifierOperand1!=null) || (arithmeticalIdentifierOperand2 != null))
             {
                 printerShowOperationType = true;
 
