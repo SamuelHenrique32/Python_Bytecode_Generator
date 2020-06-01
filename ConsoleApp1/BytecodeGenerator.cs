@@ -292,6 +292,17 @@ namespace Analyzer
             return null;
         }
 
+        public Boolean getLastStackPosition(int? value)
+        {
+            if (printerOperationsStack.Peek() != value)
+            {
+                return false;
+            }
+
+            return true;
+
+        }
+
         public void updateIdentifierValue(String identifier, int? value)
         {
             foreach(Symbol sym in symbolsTable)
@@ -349,8 +360,17 @@ namespace Analyzer
             }
             else
             {
+                if ((operation != null) && (!isIdentifier(operation.operand1)) && printerShowOperationType && printerOperationsStack.Count <= 1)
+                {
+                    valueToVerifyInStack = Int16.Parse(operation.operand1);
 
-                if((operation!=null) && (!isIdentifier(operation.operand2)))
+                    if (!printerOperationsStack.Contains(valueToVerifyInStack))
+                    {
+                        addSimpleLoadConst(valueToVerifyInStack, currentLine);
+                    }
+                }
+
+                if ((operation!=null) && (!isIdentifier(operation.operand2)))
                 {
                     valueToVerifyInStack = Int16.Parse(operation.operand2);
 
@@ -393,6 +413,27 @@ namespace Analyzer
                     }
                     else if (printerShowOperationType)
                     {
+                        if (isIdentifier(operation.operand1))
+                        {
+                            /*valueToVerifyInStack = (int)getIdentifierValue(operation.operand1);
+
+                            mustAddLoadConst = false;
+
+                            printerLoadName = true;
+
+                            identifier = operation.operand1;*/
+                        }
+                        else
+                        {
+                            valueToVerifyInStack = Int16.Parse(operation.operand1);
+
+                            // Verify if the operand 1 is in stack
+                            if (!printerOperationsStack.Contains(valueToVerifyInStack))
+                            {
+                                //addSimpleLoadConst(valueToVerifyInStack, currentLine);
+                            }
+                        }
+
                         if (isIdentifier(operation.operand2))
                         {
                             valueToVerifyInStack = (int)getIdentifierValue(operation.operand2);
@@ -454,7 +495,7 @@ namespace Analyzer
                         }                        
                     }
 
-                    if (mustAddLoadConst)
+                    if (mustAddLoadConst && !printerShowCompareOp)
                     {
                         bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -510,6 +551,17 @@ namespace Analyzer
 
                 if (operation.currentOperator == TipoTk.TkMais)
                 {
+                    // Verify if the second operand (if identifier) is in the stack
+                    if (isIdentifier(operation.operand2)){
+
+                        valueToVerifyInStack = getIdentifierValue(operation.operand2);
+
+                        if (!getLastStackPosition(valueToVerifyInStack))
+                        {
+                            addSimpleLoadName(valueToVerifyInStack, currentLine, operation.operand2);
+                        }
+                    }
+
                     handleStack(OpCode.BINARY_ADD, value);
 
                     bytecodeRegisterForAttribuition.opCode = (int)OpCode.BINARY_ADD;
@@ -650,6 +702,56 @@ namespace Analyzer
             printerFoundAnIdentifier = false;
 
             printerShowOperationType = false;
+        }
+
+        public void addSimpleLoadConst(int? value, int currentLine)
+        {
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLine;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(" + value.ToString() + ")";
+
+            handleStack(OpCode.LOAD_CONST, value);
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
+        }
+
+        public void addSimpleLoadName(int? value, int currentLine, String identifier)
+        {
+            handleStack(OpCode.LOAD_NAME, getIdentifierValue(identifier));
+
+            //printerLoadName = false;
+
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLine;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_NAME;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(" + identifier + ")";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         public Boolean printerAtribuition()
