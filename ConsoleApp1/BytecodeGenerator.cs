@@ -341,7 +341,7 @@ namespace Analyzer
             //--------------------------------------------------------------------------------------
             // Prepares LOAD_CONST
 
-            int valueToVerifyInStack = 0;
+            int? valueToVerifyInStack = 0;
 
             if((!printerSimpleAtrib) && ((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode)))
             {
@@ -349,6 +349,17 @@ namespace Analyzer
             }
             else
             {
+
+                if((operation!=null) && (!isIdentifier(operation.operand2)))
+                {
+                    valueToVerifyInStack = Int16.Parse(operation.operand2);
+
+                    if (!printerOperationsStack.Contains(valueToVerifyInStack))
+                    {
+                        printerLoadConst = true;
+                    }
+                }
+
                 // Verify if it's necessary to load a constant
                 if ((currentLine != printerLastCompLine) && (printerLoadConst || printerOperationsStack.Count <= 1))
                 {
@@ -385,6 +396,12 @@ namespace Analyzer
                         if (isIdentifier(operation.operand2))
                         {
                             valueToVerifyInStack = (int)getIdentifierValue(operation.operand2);
+
+                            mustAddLoadConst = false;
+
+                            printerLoadName = true;
+
+                            identifier = operation.operand2;
                         }
                         else
                         {
@@ -393,7 +410,7 @@ namespace Analyzer
 
                         if (!printerOperationsStack.Contains(valueToVerifyInStack))
                         {
-                            bytecodeRegisterCurrentToken.preview = "(" + operation.operand2 + ")";
+                            bytecodeRegisterCurrentToken.preview = "(" + valueToVerifyInStack + ")";
 
                             //identifierValue = Int16.Parse(operation.operand2);
                             identifierValue = valueToVerifyInStack;
@@ -857,6 +874,14 @@ namespace Analyzer
                     // Expression in the right
                     int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(true);
                     int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(true);
+
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, operationRelationalPosInCurrentLine+1, operationsInCurrentLine.Count);
+
+                    // If the operands aren't null, the bytecode element was already added
+                    if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
+                    {
+                        mountBytecode(line, null, null, null, false, true);
+                    }
                 }
 
                 printerShowCompareOp = true;
