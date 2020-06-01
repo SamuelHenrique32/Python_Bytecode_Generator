@@ -373,7 +373,7 @@ namespace Analyzer
 
                     bytecodeRegisterCurrentToken.offset = currentOffset;
 
-                    this.currentOffset += 2;
+                    //this.currentOffset += 2;
 
                     bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
 
@@ -457,6 +457,8 @@ namespace Analyzer
                     if (mustAddLoadConst)
                     {
                         bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                        this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
                     }                    
                 }
             }            
@@ -478,7 +480,7 @@ namespace Analyzer
 
                 bytecodeRegisterCurrentToken.offset = currentOffset;
 
-                this.currentOffset += 2;
+                this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
 
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_NAME;
 
@@ -504,9 +506,9 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += 2;
+                this.currentOffset += getOpCodeOffsetSize(OpCode.BINARY_ADD);
 
-                if(operation.currentOperator == TipoTk.TkMais)
+                if (operation.currentOperator == TipoTk.TkMais)
                 {
                     handleStack(OpCode.BINARY_ADD, value);
 
@@ -552,7 +554,7 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += 2;
+                this.currentOffset += getOpCodeOffsetSize(OpCode.STORE_NAME);
 
                 bytecodeRegisterForAttribuition.opCode = (int)OpCode.STORE_NAME;
 
@@ -587,7 +589,7 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += 2;
+                this.currentOffset += getOpCodeOffsetSize(OpCode.COMPARE_OP);
 
                 bytecodeRegisterForAttribuition.opCode = (int)OpCode.COMPARE_OP;
 
@@ -629,7 +631,7 @@ namespace Analyzer
 
                 bytecodeRegisterForJumpIfFalse.offset = currentOffset;
 
-                this.currentOffset += 2;
+                this.currentOffset += getOpCodeOffsetSize(OpCode.POP_JUMP_IF_FALSE);
 
                 handleStack(OpCode.POP_JUMP_IF_FALSE, null);
 
@@ -653,6 +655,56 @@ namespace Analyzer
         public Boolean printerAtribuition()
         {
             return ((attribuitionOperatorCounter > 0) && (!printerFoundAnIdentifier) && (!printerShowOperationType));
+        }
+
+        public int getOpCodeOffsetSize(OpCode opCode)
+        {
+            int opcodeToNum = (Int16)opCode;
+
+            switch (opcodeToNum)
+            {
+                case 0:
+                    return 3;
+                break;
+
+                case 1:
+                    return 3;
+                break;
+
+                case 2:
+                    return 3;
+                break;
+
+                case 3:
+                    return 3;
+                break;
+
+                case 4:
+                    return 1;
+                break;
+
+                case 5:
+                    return 1;
+                break;
+
+                case 6:
+                    return 1;
+                break;
+
+                case 7:
+                    return 1;
+                break;
+
+                case 8:
+                    return 3;
+                break;
+
+                case 9:
+                    return 3;
+                break;
+            }
+
+            return -1;
         }
 
         public void generateBytecode()
