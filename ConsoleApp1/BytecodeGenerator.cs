@@ -349,6 +349,7 @@ namespace Analyzer
         public void mountBytecode(int currentLine, String identifier, Operation operation, int? value, Boolean mustAddIdentifier, Boolean restrictedOpCode)
         {
             int? identifierValue = 0;
+            int? valueToAddInStack = 0;
             Boolean mustAddLoadConst = true;
 
             //--------------------------------------------------------------------------------------
@@ -409,9 +410,11 @@ namespace Analyzer
 
                         bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2.ToString() + ")";
 
+                        valueToAddInStack = Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2);
+
                         identifierValue = Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2);
 
-                        handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
+                        //handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
                     }
                     else if (printerShowOperationType)
                     {
@@ -455,20 +458,24 @@ namespace Analyzer
                         {
                             bytecodeRegisterCurrentToken.preview = "(" + valueToVerifyInStack + ")";
 
+                            valueToAddInStack = valueToVerifyInStack;
+
                             //identifierValue = Int16.Parse(operation.operand2);
                             identifierValue = valueToVerifyInStack;
 
                             //handleStack(OpCode.LOAD_CONST, Int16.Parse(operation.operand2));
-                            handleStack(OpCode.LOAD_CONST, identifierValue);
+                            //handleStack(OpCode.LOAD_CONST, identifierValue);
                         }
                         // Load result
                         else
                         {
                             bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
 
+                            valueToAddInStack = (int)printerLastExpressionResult;
+
                             identifierValue = printerLastExpressionResult;
 
-                            handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                            //handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
                         }
                     }
                     // Load result
@@ -478,7 +485,11 @@ namespace Analyzer
                         {
                             bytecodeRegisterCurrentToken.preview = "(" + identifier.ToString() + ")";
 
-                            handleStack(OpCode.LOAD_CONST, Int16.Parse(identifier));
+                            //printerLastExpressionResult = getIdentifierValue(identifier);
+
+                            valueToAddInStack = Int16.Parse(identifier);
+
+                            //handleStack(OpCode.LOAD_CONST, Int16.Parse(identifier));
                         }
                         else
                         {
@@ -486,9 +497,11 @@ namespace Analyzer
                             {
                                 bytecodeRegisterCurrentToken.preview = "(" + printerLastExpressionResult.ToString() + ")";
 
+                                valueToAddInStack = printerLastExpressionResult;
+
                                 identifierValue = printerLastExpressionResult;
 
-                                handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
+                                //handleStack(OpCode.LOAD_CONST, printerLastExpressionResult);
                             }
                             else
                             {
@@ -499,7 +512,16 @@ namespace Analyzer
 
                     if (mustAddLoadConst && !printerShowCompareOp)
                     {
-                        bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+                        if(operation!=null && identifier == operation.operand1 && printerLastExpressionResult.ToString()!=identifier)
+                        {
+                            // For now, do nothing
+                        }
+                        else
+                        {
+                            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                            handleStack(OpCode.LOAD_CONST, valueToAddInStack);
+                        }
 
                         //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
                     }                    
@@ -553,6 +575,12 @@ namespace Analyzer
 
                 if (operation.currentOperator == TipoTk.TkMais)
                 {
+                    // Verify if the first operand (if not identifier) is in the stack
+                    if (!isIdentifier(operation.operand1))
+                    {
+                        valueToVerifyInStack = Int16.Parse(operation.operand1);
+                    }
+
                     // Verify if the second operand (if identifier) is in the stack
                     if (isIdentifier(operation.operand2)){
 
@@ -1124,7 +1152,7 @@ namespace Analyzer
 
                     printerLoadName = true;
 
-                    mountBytecode(currentLineInFile, operation.operand1, null, null, false, false);
+                    mountBytecode(currentLineInFile, operation.operand1, operation, null, false, false);
                 }
 
                 arithmeticalIdentifierOperand1 = getIdentifierValue(operation.operand1);
