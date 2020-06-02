@@ -138,6 +138,8 @@ namespace Analyzer
         public TipoTk printerCompElement;
 
         public int? printerLastCompLine = null;
+
+        public int printerCurrentOffset = 0;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -499,7 +501,7 @@ namespace Analyzer
                     {
                         bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                        this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
+                        //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
                     }                    
                 }
             }            
@@ -521,7 +523,7 @@ namespace Analyzer
 
                 bytecodeRegisterCurrentToken.offset = currentOffset;
 
-                this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
+                //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
 
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_NAME;
 
@@ -547,7 +549,7 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += getOpCodeOffsetSize(OpCode.BINARY_ADD);
+                //this.currentOffset += getOpCodeOffsetSize(OpCode.BINARY_ADD);
 
                 if (operation.currentOperator == TipoTk.TkMais)
                 {
@@ -606,7 +608,7 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += getOpCodeOffsetSize(OpCode.STORE_NAME);
+                //this.currentOffset += getOpCodeOffsetSize(OpCode.STORE_NAME);
 
                 bytecodeRegisterForAttribuition.opCode = (int)OpCode.STORE_NAME;
 
@@ -641,7 +643,7 @@ namespace Analyzer
 
                 bytecodeRegisterForAttribuition.offset = currentOffset;
 
-                this.currentOffset += getOpCodeOffsetSize(OpCode.COMPARE_OP);
+                //this.currentOffset += getOpCodeOffsetSize(OpCode.COMPARE_OP);
 
                 bytecodeRegisterForAttribuition.opCode = (int)OpCode.COMPARE_OP;
 
@@ -683,7 +685,7 @@ namespace Analyzer
 
                 bytecodeRegisterForJumpIfFalse.offset = currentOffset;
 
-                this.currentOffset += getOpCodeOffsetSize(OpCode.POP_JUMP_IF_FALSE);
+                //this.currentOffset += getOpCodeOffsetSize(OpCode.POP_JUMP_IF_FALSE);
 
                 handleStack(OpCode.POP_JUMP_IF_FALSE, null);
 
@@ -725,7 +727,7 @@ namespace Analyzer
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-            this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
+            //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
         }
 
         public void addSimpleLoadName(int? value, int currentLine, String identifier)
@@ -742,7 +744,7 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.offset = currentOffset;
 
-            this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
+            //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_NAME);
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_NAME;
 
@@ -1445,6 +1447,8 @@ namespace Analyzer
         {
             int lastPrintedLine = 0;
 
+            handleGeneratedBytecodeOffset();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -1490,6 +1494,16 @@ namespace Analyzer
                 }                
 
                 Console.WriteLine(bytecodeRegister.preview);
+            }
+        }
+
+        public void handleGeneratedBytecodeOffset()
+        {
+            foreach(BytecodeRegister bytecodeRegister in bytecodeRegisters)
+            {
+                bytecodeRegister.offset = printerCurrentOffset;
+
+                printerCurrentOffset += getOpCodeOffsetSize((Analyzer.OpCode)bytecodeRegister.opCode);
             }
         }
 
