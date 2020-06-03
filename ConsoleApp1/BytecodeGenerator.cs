@@ -834,6 +834,10 @@ namespace Analyzer
                 case 9:
                     return 3;
                 break;
+
+                case 10:
+                    return 1;
+                break;
             }
 
             return -1;
@@ -1473,6 +1477,8 @@ namespace Analyzer
 
         public void printGeneratedBytecode()
         {
+            addFinalByteCodeRegisters();
+
             int lastPrintedLine = 0;
 
             handleGeneratedBytecodeOffset();
@@ -1505,6 +1511,12 @@ namespace Analyzer
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
+                else if(bytecodeRegister.opCode == (int)OpCode.RETURN_VALUE)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode));
+
+                    continue;
+                }
                 else
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
@@ -1523,6 +1535,38 @@ namespace Analyzer
 
                 Console.WriteLine(bytecodeRegister.preview);
             }
+        }
+
+        public void addFinalByteCodeRegisters()
+        {
+            // Adds LOAD_CONST
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(None)";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // Adds RETURN_VALUE
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.RETURN_VALUE;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         public void handleGeneratedBytecodeOffset()
@@ -1572,6 +1616,10 @@ namespace Analyzer
                 case OpCode.POP_JUMP_IF_FALSE:
                     // What to do?
                 break;
+
+                case OpCode.RETURN_VALUE:
+                    // What to do?
+                break;
             }
         }
 
@@ -1617,6 +1665,10 @@ namespace Analyzer
 
                 case 9:
                     return "POP_JUMP_IF_FALSE";
+                break;
+
+                case 10:
+                    return "RETURN_VALUE";
                 break;
             }
 
