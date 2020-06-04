@@ -373,6 +373,7 @@ namespace Analyzer
                     }
                 }
 
+
                 if ((operation!=null) && (!isIdentifier(operation.operand2)))
                 {
                     valueToVerifyInStack = Int16.Parse(operation.operand2);
@@ -837,6 +838,10 @@ namespace Analyzer
 
                 case 10:
                     return 1;
+                break;
+
+                case 11:
+                    return 3;
                 break;
             }
 
@@ -1620,6 +1625,10 @@ namespace Analyzer
                 case OpCode.RETURN_VALUE:
                     // What to do?
                 break;
+
+                case OpCode.JUMP_FORWARD:
+                    // What to do?
+                break;
             }
         }
 
@@ -1669,6 +1678,10 @@ namespace Analyzer
 
                 case 10:
                     return "RETURN_VALUE";
+                break;
+
+                case 11:
+                    return "JUMP_FORWARD";
                 break;
             }
 

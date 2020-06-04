@@ -18,6 +18,7 @@ namespace Analyzer
         BINARY_TRUE_DIVIDE,
         COMPARE_OP,
         POP_JUMP_IF_FALSE,
-        RETURN_VALUE
+        RETURN_VALUE,
+        JUMP_FORWARD
     }
 }
