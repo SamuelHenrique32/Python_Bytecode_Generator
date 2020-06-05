@@ -87,6 +87,8 @@ namespace Analyzer
 
         public int ifElementCounter = 0;
 
+        public int desidentElementCounter = 0;
+
         //--------------------------------------------------------------------------------------
         // Elements in line counter for if statements
         public int addOperatorCounterLeft = 0;
@@ -140,6 +142,16 @@ namespace Analyzer
         public int? printerLastCompLine = null;
 
         public int printerCurrentOffset = 0;
+
+        public int printerCurrentIfIdentationLevel = 0;
+
+        public Stack<IdentDesidentLevel> printerIdentationRegisters = new Stack<IdentDesidentLevel>();
+
+        public Stack<IdentDesidentLevel> printerDesidentRegisters = new Stack<IdentDesidentLevel>();
+
+        public IdentDesidentLevel printerCurrentIdentationLevel = null;
+
+        public IdentDesidentLevel printerCurrentDesidentLevel = null;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -708,7 +720,7 @@ namespace Analyzer
             {
                 BytecodeRegister bytecodeRegisterForJumpIfFalse = new BytecodeRegister();
 
-                bytecodeRegisterForJumpIfFalse.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+                bytecodeRegisterForJumpIfFalse.lineInGeneratedBytecode = currentLineInGeneratedBytecode;
 
                 bytecodeRegisterForJumpIfFalse.lineInFile = currentLine;
 
@@ -726,6 +738,13 @@ namespace Analyzer
                 bytecodeRegisters.Add(bytecodeRegisterForJumpIfFalse);
 
                 printerPopJumpIfFalse = false;
+
+                // Pop jump if false line
+                printerCurrentIdentationLevel.bytecodeRegistersLine = currentLineInGeneratedBytecode;
+
+                printerIdentationRegisters.Push(printerCurrentIdentationLevel);
+
+                currentLineInGeneratedBytecode++;
             }
 
             //--------------------------------------------------------------------------------------
@@ -874,6 +893,13 @@ namespace Analyzer
 
                     verifyOperatorsInCurrentLine(currentLineInFile);
 
+                    if (desidentElementCounter > 0)
+                    {
+                        printerCurrentDesidentLevel.bytecodeRegistersLine = bytecodeRegisters.Count - 1;
+
+                        handleDesident(i);
+                    }
+
                     handleLine(i);
 
                     currentLineInFile++;
@@ -883,6 +909,43 @@ namespace Analyzer
             }
 
             printGeneratedBytecode();
+        }
+
+        // Handle desident for IF
+        public void handleDesident(int currentLineInFile)
+        {
+            IdentDesidentLevel identationLevel = printerIdentationRegisters.Peek();
+
+            // If it's an if desident
+            if (identationLevel.tokenType == TipoTk.TkSe)
+            {
+                printerCurrentIfIdentationLevel--;
+
+                addSimpleJumpForward(currentLineInFile);
+
+                printerIdentationRegisters.Pop();
+            }
+        }
+
+        public void addSimpleJumpForward(int currentLineInFile)
+        {
+            // Adds JUMP_FORWARD
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLineInFile-1;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_FORWARD;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            //bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         public String getVariableForAttribuition()
@@ -1480,6 +1543,44 @@ namespace Analyzer
             return false;
         }
 
+        public void handleIfStatements()
+        {
+            int lineOfJumpForwardInFile = 0;
+
+            for(int i=0; i<bytecodeRegisters.Count-1; i++)
+            {
+                if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                {
+                    lineOfJumpForwardInFile = bytecodeRegisters[i].lineInFile;
+
+                    for (int j=i+1; j<bytecodeRegisters.Count-1; j++)
+                    {
+                        if(bytecodeRegisters[j].lineInFile == lineOfJumpForwardInFile+1)
+                        {
+                            bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                            handlePopJumpIfFalse(bytecodeRegisters[j].offset, i);
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void handlePopJumpIfFalse(int offsetValue, int currentLineInBytecode)
+        {
+            for(int i=currentLineInBytecode; i>=0; i--)
+            {
+                if(bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                {
+                    bytecodeRegisters[i].stackPos = offsetValue;
+
+                    break;
+                }
+            }
+        }
+
         public void printGeneratedBytecode()
         {
             addFinalByteCodeRegisters();
@@ -1487,6 +1588,8 @@ namespace Analyzer
             int lastPrintedLine = 0;
 
             handleGeneratedBytecodeOffset();
+
+            handleIfStatements();
 
             Console.WriteLine("\nBytecode Gerado:");
 
@@ -1521,6 +1624,10 @@ namespace Analyzer
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode));
 
                     continue;
+                }
+                else if(bytecodeRegister.opCode == (int)OpCode.JUMP_FORWARD)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
                 else
                 {
@@ -1841,7 +1948,19 @@ namespace Analyzer
 
                         case TipoTk.TkSe:
                             ifElementCounter++;
+                            printerCurrentIfIdentationLevel++;
                             operationsInCurrentLine.Add(new Operation(null, null, lexicalTokens[i - 1].coluna, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_IF_ATTRIBUTION_PRECEDENCE));
+
+                            printerCurrentIdentationLevel = null;
+                            printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
+                        break;
+
+                        case TipoTk.TkDesident:
+                            desidentElementCounter++;
+                            operationsInCurrentLine.Add(new Operation(null, null, -1, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_DESIDENT_PRECEDENCE));
+
+                            printerCurrentDesidentLevel = null;
+                            printerCurrentDesidentLevel = new IdentDesidentLevel(currentLine, TipoTk.TkDesident);
                         break;
                     }
                 }
@@ -1899,6 +2018,8 @@ namespace Analyzer
             divOperatorCounterRight = 0;
 
             operationRelationalPosInCurrentLine = 0;
+
+            desidentElementCounter = 0;
         }
     }    
 }
