@@ -89,6 +89,8 @@ namespace Analyzer
 
         public int desidentElementCounter = 0;
 
+        public int elseElementCounter = 0;
+
         //--------------------------------------------------------------------------------------
         // Elements in line counter for if statements
         public int addOperatorCounterLeft = 0;
@@ -152,6 +154,16 @@ namespace Analyzer
         public IdentDesidentLevel printerCurrentIdentationLevel = null;
 
         public IdentDesidentLevel printerCurrentDesidentLevel = null;
+
+        public int printerLastLineWithElse = -1;
+
+        public int printerOffsetIndexToInsertInPopJumpIfFalse = -1;
+
+        public Boolean printerWaitingForElseDesident = false;
+
+        public Boolean printerWaitingOffsetForJumpForward = false;
+
+        public int printerIndexToGetOffsetForJumpForward = -1;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -421,11 +433,11 @@ namespace Analyzer
                     {
                         printerSimpleAtrib = false;
 
-                        bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2.ToString() + ")";
+                        bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[searchForSimpleAtribIndex()].operand2.ToString() + ")";
 
-                        valueToAddInStack = Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2);
+                        valueToAddInStack = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
 
-                        identifierValue = Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2);
+                        identifierValue = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
 
                         //handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
                     }
@@ -754,6 +766,19 @@ namespace Analyzer
             printerShowOperationType = false;
         }
 
+        public int searchForSimpleAtribIndex()
+        {
+            for(int i=0; i<operationsInCurrentLine.Count; i++)
+            {
+                if(operationsInCurrentLine[i].currentOperator == TipoTk.TkAtrib)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         public void addSimpleLoadConst(int? value, int currentLine)
         {
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
@@ -900,7 +925,17 @@ namespace Analyzer
                         handleDesident(i);
                     }
 
-                    handleLine(i);
+                    if (elseElementCounter == 0)
+                    {
+                        handleLine(i);
+
+                        if (printerWaitingOffsetForJumpForward)
+                        {
+                            printerWaitingOffsetForJumpForward = false;
+
+                            printerIndexToGetOffsetForJumpForward = bytecodeRegisters.Count+1;
+                        }
+                    }
 
                     currentLineInFile++;
 
@@ -1581,6 +1616,30 @@ namespace Analyzer
             }
         }
 
+        public void insertStackPosInPopJumpIfFalse()
+        {
+            foreach(BytecodeRegister bcr in bytecodeRegisters)
+            {
+                if(bcr.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                {
+                    bcr.stackPos = bytecodeRegisters[printerOffsetIndexToInsertInPopJumpIfFalse].offset;
+
+                    break;
+                }
+            }
+        }
+
+        public void insertOffsetInJumpForwardPreview()
+        {
+            for(int i=printerIndexToGetOffsetForJumpForward; i>=0; i--)
+            {
+                if(bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                {
+                    bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[printerIndexToGetOffsetForJumpForward].offset + ")";
+                }
+            }
+        }
+
         public void printGeneratedBytecode()
         {
             addFinalByteCodeRegisters();
@@ -1590,6 +1649,20 @@ namespace Analyzer
             handleGeneratedBytecodeOffset();
 
             handleIfStatements();
+
+            handleElse();
+
+            handleGeneratedBytecodeOffset();
+
+            if (printerOffsetIndexToInsertInPopJumpIfFalse != -1)
+            {
+                insertStackPosInPopJumpIfFalse();
+            }
+
+            if (printerIndexToGetOffsetForJumpForward != -1)
+            {
+                insertOffsetInJumpForwardPreview();
+            }
 
             Console.WriteLine("\nBytecode Gerado:");
 
@@ -1649,6 +1722,63 @@ namespace Analyzer
             }
         }
 
+        public void handleElse()
+        {
+            if (printerLastLineWithElse != -1)
+            {
+                if (searchJumpForward() == -1)
+                {
+                    // It's necessary to add a jump forward
+                    addJumpForwardWithElseStatement();
+                }
+            }
+        }
+
+        public void addJumpForwardWithElseStatement()
+        {
+            for (int i=0; i<bytecodeRegisters.Count; i++)
+            {
+                if((bytecodeRegisters[i].lineInFile == printerLastLineWithElse-1) && (bytecodeRegisters[i+1].lineInFile == printerLastLineWithElse + 1))
+                {
+                    // Adds JUMP_FORWARD
+                    BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+                    bytecodeRegisterCurrentToken.lineInGeneratedBytecode = i+1;
+
+                    currentLineInGeneratedBytecode++;
+
+                    bytecodeRegisterCurrentToken.lineInFile = printerLastLineWithElse - 1;
+
+
+                    bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_FORWARD;
+
+                    // TODO
+                    bytecodeRegisterCurrentToken.stackPos = 0;
+
+                    bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
+
+                    bytecodeRegisters.Insert(i+1, bytecodeRegisterCurrentToken);
+
+                    printerOffsetIndexToInsertInPopJumpIfFalse = i + 2;
+
+                    break;
+                }
+            }
+        }
+
+        public int searchJumpForward()
+        {
+            for(int i=0; i< bytecodeRegisters.Count; i++)
+            {
+                if(bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         public void addFinalByteCodeRegisters()
         {
             // Adds LOAD_CONST
@@ -1683,7 +1813,9 @@ namespace Analyzer
 
         public void handleGeneratedBytecodeOffset()
         {
-            foreach(BytecodeRegister bytecodeRegister in bytecodeRegisters)
+            printerCurrentOffset = 0;
+
+            foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
             {
                 bytecodeRegister.offset = printerCurrentOffset;
 
@@ -1955,12 +2087,28 @@ namespace Analyzer
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
                         break;
 
+                        case TipoTk.TkSenao:
+                            elseElementCounter++;
+                            printerCurrentIdentationLevel = null;
+                            printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSenao);
+                            printerIdentationRegisters.Push(printerCurrentIdentationLevel);
+                            printerLastLineWithElse = currentLine;
+                            printerWaitingForElseDesident = true;
+                        break;
+
                         case TipoTk.TkDesident:
                             desidentElementCounter++;
                             operationsInCurrentLine.Add(new Operation(null, null, -1, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_DESIDENT_PRECEDENCE));
 
                             printerCurrentDesidentLevel = null;
                             printerCurrentDesidentLevel = new IdentDesidentLevel(currentLine, TipoTk.TkDesident);
+
+                            if (printerWaitingForElseDesident)
+                            {
+                                printerWaitingForElseDesident = false;
+                                printerWaitingOffsetForJumpForward = true;
+                            }
+
                         break;
                     }
                 }
@@ -2020,6 +2168,8 @@ namespace Analyzer
             operationRelationalPosInCurrentLine = 0;
 
             desidentElementCounter = 0;
+
+            elseElementCounter = 0;
         }
     }    
 }
