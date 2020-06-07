@@ -91,6 +91,8 @@ namespace Analyzer
 
         public int elseElementCounter = 0;
 
+        public int elseIfElementCounter = 0;
+
         //--------------------------------------------------------------------------------------
         // Elements in line counter for if statements
         public int addOperatorCounterLeft = 0;
@@ -156,6 +158,8 @@ namespace Analyzer
         public IdentDesidentLevel printerCurrentDesidentLevel = null;
 
         public int printerLastLineWithElse = -1;
+
+        public int printerLastLineWithElseIf = -1;
 
         public int printerOffsetIndexToInsertInPopJumpIfFalse = -1;
 
@@ -952,6 +956,7 @@ namespace Analyzer
             IdentDesidentLevel identationLevel = printerIdentationRegisters.Peek();
 
             // If it's an if desident
+            //if (identationLevel.tokenType == TipoTk.TkSe && elseIfElementCounter == 0)
             if (identationLevel.tokenType == TipoTk.TkSe)
             {
                 printerCurrentIfIdentationLevel--;
@@ -1102,14 +1107,21 @@ namespace Analyzer
                 verifyCompElement();
 
                 // There is one element in the left
-                if (operationsInCurrentLine[1].currentOperator == printerCompElement)
+                if (((desidentElementCounter==0) && (operationsInCurrentLine[1].currentOperator==printerCompElement)) || ((desidentElementCounter==1) && (operationsInCurrentLine[2].currentOperator==printerCompElement)))
                 {
                     // It's an identifier
                     if (isIdentifier(operationsInCurrentLine[1].operand1))
                     {
                         printerLoadName = true;
 
-                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+                        if (desidentElementCounter == 0)
+                        {
+                            mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+                        }
+                        else if(desidentElementCounter == 1)
+                        {
+                            mountBytecode(line, operationsInCurrentLine[2].operand1, null, null, false, true);
+                        }
 
                         printerLoadName = false;
                     }
@@ -1679,7 +1691,11 @@ namespace Analyzer
                     Console.Write("\t");
                 }
 
-                if (bytecodeRegister.offset < 10)
+                if(bytecodeRegister.offset >= 100)
+                {
+                    Console.Write(bytecodeRegister.offset + " ");
+                }
+                else if (bytecodeRegister.offset < 10)
                 {
                     Console.Write(" " + bytecodeRegister.offset + "  ");
                 }
@@ -2094,6 +2110,22 @@ namespace Analyzer
                             printerIdentationRegisters.Push(printerCurrentIdentationLevel);
                             printerLastLineWithElse = currentLine;
                             printerWaitingForElseDesident = true;
+
+                            if (printerLastLineWithElseIf != -1)
+                            {
+                                addSimpleJumpForward(currentLine);
+                            }
+
+                        break;
+
+                        case TipoTk.TkSenaoSe:
+                            ifElementCounter++;
+                            elseIfElementCounter++;
+                            printerCurrentIfIdentationLevel++;
+                            operationsInCurrentLine.Add(new Operation(null, null, lexicalTokens[i - 1].coluna, -1, lexicalTokens[i].tipo, OperationPrecedence.TK_IF_ATTRIBUTION_PRECEDENCE));
+                            printerLastLineWithElseIf = currentLine;
+                            printerCurrentIdentationLevel = null;
+                            printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
                         break;
 
                         case TipoTk.TkDesident:
@@ -2170,6 +2202,8 @@ namespace Analyzer
             desidentElementCounter = 0;
 
             elseElementCounter = 0;
+
+            elseIfElementCounter = 0;
         }
     }    
 }
