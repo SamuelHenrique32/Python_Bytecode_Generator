@@ -172,6 +172,10 @@ namespace Analyzer
         public Boolean printerWaitingForElseAfterElseIf = false;
 
         public int printerLineInByteCodeRegisterWithElseDesident = -1;
+
+        public Boolean printerCountLinesInElseIf = false;
+        
+        public int printerQuantityOfLinesInElseIf = 0;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -924,7 +928,12 @@ namespace Analyzer
                 {
                     resetLineElements();
 
-                    verifyOperatorsInCurrentLine(currentLineInFile);
+                    if (printerCountLinesInElseIf)
+                    {
+                        printerQuantityOfLinesInElseIf++;
+                    }
+
+                    verifyOperatorsInCurrentLine(currentLineInFile);                    
 
                     if (desidentElementCounter > 0)
                     {
@@ -1707,6 +1716,11 @@ namespace Analyzer
                 handleElseIf();
             }
 
+            if (printerQuantityOfLinesInElseIf != 0)
+            {
+                insertStackPosInPopJumpIfFalseOfElseIf();
+            }
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -1766,6 +1780,34 @@ namespace Analyzer
                 }
 
                 Console.WriteLine(bytecodeRegister.preview);
+            }
+        }
+
+        public void insertStackPosInPopJumpIfFalseOfElseIf()
+        {
+            Boolean internalReturnValue = false;
+
+            for(int i=bytecodeRegisters.Count-1; i>=0; i--)
+            {
+                if((bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE) && (bytecodeRegisters[i].stackPos == 0))
+                {
+                    for(int j=i; j<bytecodeRegisters.Count; j++)
+                    {
+                        if(bytecodeRegisters[j].lineInFile >= bytecodeRegisters[i].lineInFile + printerQuantityOfLinesInElseIf)
+                        {
+                            bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                            internalReturnValue = true;
+
+                            break;
+                        }
+                    }
+                }
+
+                if (internalReturnValue)
+                {
+                    break;
+                }
             }
         }
 
@@ -2149,6 +2191,8 @@ namespace Analyzer
                                 printerWaitingForElseAfterElseIf = true;
                             }
 
+                            printerCountLinesInElseIf = false;
+
                             break;
 
                         case TipoTk.TkSenaoSe:
@@ -2159,6 +2203,7 @@ namespace Analyzer
                             printerLastLineWithElseIf = currentLine;
                             printerCurrentIdentationLevel = null;
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
+                            printerCountLinesInElseIf = true;
                             break;
 
                         case TipoTk.TkDesident:
