@@ -168,6 +168,10 @@ namespace Analyzer
         public Boolean printerWaitingOffsetForJumpForward = false;
 
         public int printerIndexToGetOffsetForJumpForward = -1;
+
+        public Boolean printerWaitingForElseAfterElseIf = false;
+
+        public int printerLineInByteCodeRegisterWithElseDesident = -1;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -214,7 +218,7 @@ namespace Analyzer
 
         public int getLastLineInFile()
         {
-            return lexicalTokens[lexicalTokens.Count-1].linha;
+            return lexicalTokens[lexicalTokens.Count - 1].linha;
         }
 
         public Boolean verifyIfSymbolsExistsInTable(Token token)
@@ -282,7 +286,7 @@ namespace Analyzer
                 else
                 {
                     // If there is an attribution and this id is not in the symbols table there is a semantic error
-                    if (attribuitionOperatorCounter>0)
+                    if (attribuitionOperatorCounter > 0)
                     {
                         Console.WriteLine("\nErro semântico, a variável '" + token.valor + "' não está definida\n");
 
@@ -308,7 +312,7 @@ namespace Analyzer
 
         public int? getIdentifierValue(String identifier)
         {
-            foreach(Symbol sym in symbolsTable)
+            foreach (Symbol sym in symbolsTable)
             {
                 if (sym.identifier.Equals(identifier))
                 {
@@ -335,7 +339,7 @@ namespace Analyzer
 
         public void updateIdentifierValue(String identifier, int? value)
         {
-            foreach(Symbol sym in symbolsTable)
+            foreach (Symbol sym in symbolsTable)
             {
                 if (sym.identifier.Equals(identifier))
                 {
@@ -385,7 +389,7 @@ namespace Analyzer
 
             int? valueToVerifyInStack = 0;
 
-            if((!printerSimpleAtrib) && ((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode)))
+            if ((!printerSimpleAtrib) && ((printerAtribuition() && printerOperationsStack.Count >= 1) || (printerLoadName && restrictedOpCode)))
             {
                 // Do nothing
             }
@@ -402,7 +406,7 @@ namespace Analyzer
                 }
 
 
-                if ((operation!=null) && (!isIdentifier(operation.operand2)))
+                if ((operation != null) && (!isIdentifier(operation.operand2)))
                 {
                     valueToVerifyInStack = Int16.Parse(operation.operand2);
 
@@ -536,12 +540,12 @@ namespace Analyzer
                             {
                                 mustAddLoadConst = false;
                             }
-                        }                        
+                        }
                     }
 
                     if (mustAddLoadConst && !printerShowCompareOp)
                     {
-                        if(operation!=null && identifier == operation.operand1 && printerLastExpressionResult.ToString()!=identifier)
+                        if (operation != null && identifier == operation.operand1 && printerLastExpressionResult.ToString() != identifier)
                         {
                             // For now, do nothing
                         }
@@ -553,9 +557,9 @@ namespace Analyzer
                         }
 
                         //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
-                    }                    
+                    }
                 }
-            }            
+            }
             //--------------------------------------------------------------------------------------
 
             //--------------------------------------------------------------------------------------
@@ -611,7 +615,7 @@ namespace Analyzer
                     }
 
                     // Verify if the second operand (if identifier) is in the stack
-                    if (isIdentifier(operation.operand2)){
+                    if (isIdentifier(operation.operand2)) {
 
                         valueToVerifyInStack = getIdentifierValue(operation.operand2);
 
@@ -637,7 +641,7 @@ namespace Analyzer
 
                     bytecodeRegisterForAttribuition.opCode = (int)OpCode.BINARY_MULTIPLY;
                 }
-                else if(operation.currentOperator == TipoTk.TkDivisao)
+                else if (operation.currentOperator == TipoTk.TkDivisao)
                 {
                     handleStack(OpCode.BINARY_TRUE_DIVIDE, value);
 
@@ -707,7 +711,7 @@ namespace Analyzer
                 // TODO
                 bytecodeRegisterForAttribuition.stackPos = 0;
 
-                if(printerCompElement == TipoTk.TkMaior)
+                if (printerCompElement == TipoTk.TkMaior)
                 {
                     bytecodeRegisterForAttribuition.preview = "(>)";
                 }
@@ -772,9 +776,9 @@ namespace Analyzer
 
         public int searchForSimpleAtribIndex()
         {
-            for(int i=0; i<operationsInCurrentLine.Count; i++)
+            for (int i = 0; i < operationsInCurrentLine.Count; i++)
             {
-                if(operationsInCurrentLine[i].currentOperator == TipoTk.TkAtrib)
+                if (operationsInCurrentLine[i].currentOperator == TipoTk.TkAtrib)
                 {
                     return i;
                 }
@@ -846,51 +850,51 @@ namespace Analyzer
             {
                 case 0:
                     return 3;
-                break;
+                    break;
 
                 case 1:
                     return 3;
-                break;
+                    break;
 
                 case 2:
                     return 3;
-                break;
+                    break;
 
                 case 3:
                     return 3;
-                break;
+                    break;
 
                 case 4:
                     return 1;
-                break;
+                    break;
 
                 case 5:
                     return 1;
-                break;
+                    break;
 
                 case 6:
                     return 1;
-                break;
+                    break;
 
                 case 7:
                     return 1;
-                break;
+                    break;
 
                 case 8:
                     return 3;
-                break;
+                    break;
 
                 case 9:
                     return 3;
-                break;
+                    break;
 
                 case 10:
                     return 1;
-                break;
+                    break;
 
                 case 11:
                     return 3;
-                break;
+                    break;
             }
 
             return -1;
@@ -902,15 +906,15 @@ namespace Analyzer
 
             currentLineInFile = 1;
 
-            int j = currentLineInFile-1;
+            int j = currentLineInFile - 1;
 
             // For each line in file
-            for (int i=1; i<=getLastLineInFile(); i++)
+            for (int i = 1; i <= getLastLineInFile(); i++)
             {
                 j = 0;
 
                 // Find the first lexical token that has the line according to current line in file
-                while(lexicalTokens[j].linha != currentLineInFile)
+                while (lexicalTokens[j].linha != currentLineInFile)
                 {
                     j++;
                 }
@@ -937,8 +941,19 @@ namespace Analyzer
                         {
                             printerWaitingOffsetForJumpForward = false;
 
-                            printerIndexToGetOffsetForJumpForward = bytecodeRegisters.Count+1;
+                            if (printerWaitingForElseAfterElseIf)
+                            {
+                                printerIndexToGetOffsetForJumpForward = bytecodeRegisters.Count;
+                            }
+                            else
+                            {
+                                printerIndexToGetOffsetForJumpForward = bytecodeRegisters.Count + 1;
+                            }
+
+                            
                         }
+
+                        
                     }
 
                     currentLineInFile++;
@@ -974,7 +989,7 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
 
-            bytecodeRegisterCurrentToken.lineInFile = currentLineInFile-1;
+            bytecodeRegisterCurrentToken.lineInFile = currentLineInFile - 1;
 
             bytecodeRegisterCurrentToken.offset = currentOffset;
 
@@ -990,9 +1005,9 @@ namespace Analyzer
 
         public String getVariableForAttribuition()
         {
-            foreach(Operation op in operationsInCurrentLine)
+            foreach (Operation op in operationsInCurrentLine)
             {
-                if(op.currentOperator == TipoTk.TkAtrib)
+                if (op.currentOperator == TipoTk.TkAtrib)
                 {
                     return op.operand1;
                 }
@@ -1003,7 +1018,7 @@ namespace Analyzer
 
         public Boolean verifyIdentifierLoaded(String identifier)
         {
-            foreach(Symbol sym in symbolsTable)
+            foreach (Symbol sym in symbolsTable)
             {
                 if (sym.identifier.Equals(identifier))
                 {
@@ -1011,7 +1026,7 @@ namespace Analyzer
                     {
                         return true;
                     }
-                }                
+                }
             }
 
             return false;
@@ -1107,7 +1122,7 @@ namespace Analyzer
                 verifyCompElement();
 
                 // There is one element in the left
-                if (((desidentElementCounter==0) && (operationsInCurrentLine[1].currentOperator==printerCompElement)) || ((desidentElementCounter==1) && (operationsInCurrentLine[2].currentOperator==printerCompElement)))
+                if (((desidentElementCounter == 0) && (operationsInCurrentLine[1].currentOperator == printerCompElement)) || ((desidentElementCounter == 1) && (operationsInCurrentLine[2].currentOperator == printerCompElement)))
                 {
                     // It's an identifier
                     if (isIdentifier(operationsInCurrentLine[1].operand1))
@@ -1118,7 +1133,7 @@ namespace Analyzer
                         {
                             mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
                         }
-                        else if(desidentElementCounter == 1)
+                        else if (desidentElementCounter == 1)
                         {
                             mountBytecode(line, operationsInCurrentLine[2].operand1, null, null, false, true);
                         }
@@ -1144,14 +1159,14 @@ namespace Analyzer
                     handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, 1, operationRelationalPosInCurrentLine);
 
                     // If the operands aren't null, the bytecode element was already added
-                    if(arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
+                    if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
                     {
                         mountBytecode(line, null, null, null, false, true);
                     }
                 }
 
                 // There is one element in the right
-                if (operationsInCurrentLine[operationsInCurrentLine.Count-1].currentOperator == printerCompElement)
+                if (operationsInCurrentLine[operationsInCurrentLine.Count - 1].currentOperator == printerCompElement)
                 {
                     // It's an identifier
                     if (isIdentifier(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2))
@@ -1178,7 +1193,7 @@ namespace Analyzer
                     int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(true);
                     int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(true);
 
-                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, operationRelationalPosInCurrentLine+1, operationsInCurrentLine.Count);
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, operationRelationalPosInCurrentLine + 1, operationsInCurrentLine.Count);
 
                     // If the operands aren't null, the bytecode element was already added
                     if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
@@ -1207,7 +1222,7 @@ namespace Analyzer
         private void verifyCompElement()
         {
             for (int i = 0; i < operationsInCurrentLine.Count; i++) {
-                if(operationsInCurrentLine[i].currentOperator == TipoTk.TkMaior)
+                if (operationsInCurrentLine[i].currentOperator == TipoTk.TkMaior)
                 {
                     printerCompElement = TipoTk.TkMaior;
                     break;
@@ -1233,9 +1248,9 @@ namespace Analyzer
         // When found a identifier, it's necessary to verify if all left operations with precedence 1 was already done
         public Boolean verifyLeftOperationsNotCalculated(int currentIndex, int operand1Column, int operand2Column)
         {
-            for (int i = 0; i < currentIndex ; i++)
+            for (int i = 0; i < currentIndex; i++)
             {
-                if((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (!(operationsInCurrentLine[i].alreadyVerified)) && (operationsInCurrentLine[i].operand2Column!=operand1Column))
+                if ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (!(operationsInCurrentLine[i].alreadyVerified)) && (operationsInCurrentLine[i].operand2Column != operand1Column))
                 {
                     operationsInCurrentLine[i].calculateNow = true;
 
@@ -1281,7 +1296,7 @@ namespace Analyzer
             if (isIdentifier(operation.operand2))
             {
                 // It's necessary to load the first element
-                if(printerOperationsStack.Count == 0)
+                if (printerOperationsStack.Count == 0)
                 {
                     if (arithmeticalIdentifierOperand1 != null)
                     {
@@ -1345,7 +1360,7 @@ namespace Analyzer
 
             switch (operation.currentOperator)
             {
-                case TipoTk.TkMais:                    
+                case TipoTk.TkMais:
 
                     // There is no operator already used
                     if ((!verifyResultForAlreadyUsedElement(operation.operand1Column, 1)) && (!verifyResultForAlreadyUsedElement(operation.operand2Column, 2)))
@@ -1359,7 +1374,7 @@ namespace Analyzer
 
                         operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
 
-                        operationsInCurrentLine[index-1].result = arithmeticalOperand1 + arithmeticalOperand2;
+                        operationsInCurrentLine[index - 1].result = arithmeticalOperand1 + arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
@@ -1370,7 +1385,7 @@ namespace Analyzer
 
                         operationsInCurrentLine[index].result = arithmeticalOperand1 + arithmeticalOperand2;
 
-                        operationsInCurrentLine[index+1].result = arithmeticalOperand1 + arithmeticalOperand2;
+                        operationsInCurrentLine[index + 1].result = arithmeticalOperand1 + arithmeticalOperand2;
 
                         printerMoreToRightOperationIndexPrecedence1 = index;
                     }
@@ -1387,7 +1402,7 @@ namespace Analyzer
 
                     operationsInCurrentLine[index].alreadyVerified = true;
 
-                break;
+                    break;
 
                 case TipoTk.TkMenos:
 
@@ -1431,7 +1446,7 @@ namespace Analyzer
 
                     operationsInCurrentLine[index].alreadyVerified = true;
 
-                break;
+                    break;
 
                 case TipoTk.TkMultiplicacao:
 
@@ -1475,7 +1490,7 @@ namespace Analyzer
 
                     operationsInCurrentLine[index].alreadyVerified = true;
 
-                break;
+                    break;
 
                 case TipoTk.TkDivisao:
 
@@ -1519,14 +1534,14 @@ namespace Analyzer
 
                     operationsInCurrentLine[index].alreadyVerified = true;
 
-                break;
+                    break;
 
             }
 
             this.operationsInCurrentLine[index].calculateNow = false;
 
             // If a identifier was used, it's necessary to mount the operation
-            if((arithmeticalIdentifierOperand1!=null) || (arithmeticalIdentifierOperand2 != null))
+            if ((arithmeticalIdentifierOperand1 != null) || (arithmeticalIdentifierOperand2 != null))
             {
                 printerShowOperationType = true;
 
@@ -1574,9 +1589,9 @@ namespace Analyzer
 
         public Boolean verifyResultForAlreadyUsedElement(int elementColumn, int operandIndicator)
         {
-            foreach(Operation op in operationsInCurrentLine)
+            foreach (Operation op in operationsInCurrentLine)
             {
-                    
+
                 if ((op.operand1Column == elementColumn) || (op.operand2Column == elementColumn))
                 {
                     // There is a operation with this element thas was already calculated
@@ -1594,15 +1609,15 @@ namespace Analyzer
         {
             int lineOfJumpForwardInFile = 0;
 
-            for(int i=0; i<bytecodeRegisters.Count-1; i++)
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
             {
                 if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     lineOfJumpForwardInFile = bytecodeRegisters[i].lineInFile;
 
-                    for (int j=i+1; j<bytecodeRegisters.Count-1; j++)
+                    for (int j = i + 1; j < bytecodeRegisters.Count - 1; j++)
                     {
-                        if(bytecodeRegisters[j].lineInFile == lineOfJumpForwardInFile+1)
+                        if (bytecodeRegisters[j].lineInFile == lineOfJumpForwardInFile + 1)
                         {
                             bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
 
@@ -1617,9 +1632,9 @@ namespace Analyzer
 
         public void handlePopJumpIfFalse(int offsetValue, int currentLineInBytecode)
         {
-            for(int i=currentLineInBytecode; i>=0; i--)
+            for (int i = currentLineInBytecode; i >= 0; i--)
             {
-                if(bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                if (bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
                 {
                     bytecodeRegisters[i].stackPos = offsetValue;
 
@@ -1630,9 +1645,9 @@ namespace Analyzer
 
         public void insertStackPosInPopJumpIfFalse()
         {
-            foreach(BytecodeRegister bcr in bytecodeRegisters)
+            foreach (BytecodeRegister bcr in bytecodeRegisters)
             {
-                if(bcr.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                if (bcr.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
                 {
                     bcr.stackPos = bytecodeRegisters[printerOffsetIndexToInsertInPopJumpIfFalse].offset;
 
@@ -1643,11 +1658,22 @@ namespace Analyzer
 
         public void insertOffsetInJumpForwardPreview()
         {
-            for(int i=printerIndexToGetOffsetForJumpForward; i>=0; i--)
+            for (int i = printerIndexToGetOffsetForJumpForward; i >= 0; i--)
             {
-                if(bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[printerIndexToGetOffsetForJumpForward].offset + ")";
+                }
+            }
+        }
+
+        public void handleElseIf()
+        {
+            for (int i = 0; i < bytecodeRegisters.Count; i++)
+            {
+                if (bytecodeRegisters[i].lineInFile > printerLastLineWithElse)
+                {
+
                 }
             }
         }
@@ -1676,6 +1702,11 @@ namespace Analyzer
                 insertOffsetInJumpForwardPreview();
             }
 
+            if (printerLastLineWithElseIf != -1)
+            {
+                handleElseIf();
+            }
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -1691,7 +1722,7 @@ namespace Analyzer
                     Console.Write("\t");
                 }
 
-                if(bytecodeRegister.offset >= 100)
+                if (bytecodeRegister.offset >= 100)
                 {
                     Console.Write(bytecodeRegister.offset + " ");
                 }
@@ -1704,17 +1735,17 @@ namespace Analyzer
                     Console.Write(bytecodeRegister.offset + "  ");
                 }
 
-                if(bytecodeRegister.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                if (bytecodeRegister.opCode == (int)OpCode.POP_JUMP_IF_FALSE)
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
-                else if(bytecodeRegister.opCode == (int)OpCode.RETURN_VALUE)
+                else if (bytecodeRegister.opCode == (int)OpCode.RETURN_VALUE)
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode));
 
                     continue;
                 }
-                else if(bytecodeRegister.opCode == (int)OpCode.JUMP_FORWARD)
+                else if (bytecodeRegister.opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
@@ -1722,9 +1753,9 @@ namespace Analyzer
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
                 }
-                
 
-                if (bytecodeRegister.opCode!=(int)OpCode.BINARY_ADD && bytecodeRegister.opCode!=(int)OpCode.BINARY_SUBTRACT && bytecodeRegister.opCode!=(int)OpCode.BINARY_MULTIPLY && bytecodeRegister.opCode!=(int)OpCode.BINARY_TRUE_DIVIDE)
+
+                if (bytecodeRegister.opCode != (int)OpCode.BINARY_ADD && bytecodeRegister.opCode != (int)OpCode.BINARY_SUBTRACT && bytecodeRegister.opCode != (int)OpCode.BINARY_MULTIPLY && bytecodeRegister.opCode != (int)OpCode.BINARY_TRUE_DIVIDE)
                 {
                     // TODO
                     Console.Write(bytecodeRegister.stackPos + "  ");
@@ -1732,7 +1763,7 @@ namespace Analyzer
                 else
                 {
                     Console.Write("   ");
-                }                
+                }
 
                 Console.WriteLine(bytecodeRegister.preview);
             }
@@ -1752,14 +1783,14 @@ namespace Analyzer
 
         public void addJumpForwardWithElseStatement()
         {
-            for (int i=0; i<bytecodeRegisters.Count; i++)
+            for (int i = 0; i < bytecodeRegisters.Count; i++)
             {
-                if((bytecodeRegisters[i].lineInFile == printerLastLineWithElse-1) && (bytecodeRegisters[i+1].lineInFile == printerLastLineWithElse + 1))
+                if ((bytecodeRegisters[i].lineInFile == printerLastLineWithElse - 1) && (bytecodeRegisters[i + 1].lineInFile == printerLastLineWithElse + 1))
                 {
                     // Adds JUMP_FORWARD
                     BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
-                    bytecodeRegisterCurrentToken.lineInGeneratedBytecode = i+1;
+                    bytecodeRegisterCurrentToken.lineInGeneratedBytecode = i + 1;
 
                     currentLineInGeneratedBytecode++;
 
@@ -1773,7 +1804,7 @@ namespace Analyzer
 
                     bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
 
-                    bytecodeRegisters.Insert(i+1, bytecodeRegisterCurrentToken);
+                    bytecodeRegisters.Insert(i + 1, bytecodeRegisterCurrentToken);
 
                     printerOffsetIndexToInsertInPopJumpIfFalse = i + 2;
 
@@ -1784,9 +1815,9 @@ namespace Analyzer
 
         public int searchJumpForward()
         {
-            for(int i=0; i< bytecodeRegisters.Count; i++)
+            for (int i = 0; i < bytecodeRegisters.Count; i++)
             {
-                if(bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     return i;
                 }
@@ -1802,7 +1833,7 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
 
-            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile;
+            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_CONST;
 
@@ -1820,7 +1851,7 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
 
-            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile;
+            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.RETURN_VALUE;
 
@@ -1845,19 +1876,19 @@ namespace Analyzer
             {
                 case OpCode.LOAD_CONST:
                     printerOperationsStack.Push(value);
-                break;
+                    break;
 
                 case OpCode.LOAD_NAME:
                     printerOperationsStack.Push(value);
-                break;
+                    break;
 
                 case OpCode.STORE_FAST:
                     printerOperationsStack.Pop();
-                break;
+                    break;
 
                 case OpCode.STORE_NAME:
                     printerOperationsStack.Pop();
-                break;
+                    break;
 
                 case OpCode.BINARY_ADD:
                 case OpCode.BINARY_SUBTRACT:
@@ -1866,24 +1897,24 @@ namespace Analyzer
                     printerOperationsStack.Pop();
                     printerOperationsStack.Pop();
                     printerOperationsStack.Push(value);
-                break;
+                    break;
 
                 case OpCode.COMPARE_OP:
                     printerOperationsStack.Pop();
                     printerOperationsStack.Pop();
-                break;
+                    break;
 
                 case OpCode.POP_JUMP_IF_FALSE:
                     // What to do?
-                break;
+                    break;
 
                 case OpCode.RETURN_VALUE:
                     // What to do?
-                break;
+                    break;
 
                 case OpCode.JUMP_FORWARD:
                     // What to do?
-                break;
+                    break;
             }
         }
 
@@ -1893,51 +1924,51 @@ namespace Analyzer
             {
                 case 0:
                     return "LOAD_CONST";
-                break;
+                    break;
 
                 case 1:
                     return "LOAD_NAME";
-                break;
+                    break;
 
                 case 2:
                     return "STORE_FAST";
-                break;
+                    break;
 
                 case 3:
                     return "STORE_NAME";
-                break;
+                    break;
 
                 case 4:
                     return "BINARY_ADD";
-                break;
+                    break;
 
                 case 5:
                     return "BINARY_SUBTRACT";
-                break;
+                    break;
 
                 case 6:
                     return "BINARY_MULTIPLY";
-                break;
+                    break;
 
                 case 7:
                     return "BINARY_TRUE_DIVIDE";
-                break;
+                    break;
 
                 case 8:
                     return "COMPARE_OP";
-                break;
+                    break;
 
                 case 9:
                     return "POP_JUMP_IF_FALSE";
-                break;
+                    break;
 
                 case 10:
                     return "RETURN_VALUE";
-                break;
+                    break;
 
                 case 11:
                     return "JUMP_FORWARD";
-                break;
+                    break;
             }
 
             return "";
@@ -1945,9 +1976,9 @@ namespace Analyzer
 
         public void verifyOperatorsInCurrentLine(int currentLine)
         {
-            for(int i=0; i< lexicalTokens.Count; i++)
+            for (int i = 0; i < lexicalTokens.Count; i++)
             {
-                if(lexicalTokens[i].linha == currentLine)
+                if (lexicalTokens[i].linha == currentLine)
                 {
                     // TODO Don't call operationsInCurrentLine so many times
                     switch (lexicalTokens[i].tipo)
@@ -1956,21 +1987,21 @@ namespace Analyzer
 
                             if (ifElementCounter > 0)
                             {
-                                if((equalOperatorCounter>0) || (difOperatorCounter>0) || (lessThanOperatorCounter>0) || (biggerThanOperatorCounter>0))
+                                if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
                                 {
                                     addOperatorCounterRight++;
                                 }
                                 else
                                 {
                                     addOperatorCounterLeft++;
-                                }                                
+                                }
                             }
 
                             addOperatorCounter++;
 
-                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i-1].valor, lexicalTokens[i+1].valor, lexicalTokens[i-1].coluna, lexicalTokens[i+1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_PRECEDENCE));
+                            operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_PRECEDENCE));
 
-                        break;
+                            break;
 
                         case TipoTk.TkMenos:
 
@@ -1990,7 +2021,7 @@ namespace Analyzer
 
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_PRECEDENCE));
 
-                        break;
+                            break;
 
                         case TipoTk.TkMultiplicacao:
 
@@ -2010,7 +2041,7 @@ namespace Analyzer
 
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_PRECEDENCE));
 
-                        break;
+                            break;
 
                         case TipoTk.TkDivisao:
 
@@ -2030,27 +2061,27 @@ namespace Analyzer
 
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIV_PRECEDENCE));
 
-                        break;
+                            break;
 
                         case TipoTk.TkMaisIgual:
                             reducedAddOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ADD_REDUCED_PRECEDENCE));
-                        break;
+                            break;
 
                         case TipoTk.TkMenosIgual:
                             reducedSubtractionOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_SUB_REDUCED_PRECEDENCE));
-                        break;
+                            break;
 
                         case TipoTk.TkMulIgual:
                             reducedMultiplicationOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_MUL_REDUCED_PRECEDENCE));
-                        break;
+                            break;
 
                         case TipoTk.TkDivIgual:
                             reducedDivOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_DIV_REDUCED_PRECEDENCE));
-                        break;
+                            break;
 
                         case TipoTk.TkIgual:
                             equalOperatorCounter++;
@@ -2058,7 +2089,7 @@ namespace Analyzer
 
                             operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
 
-                        break;
+                            break;
 
                         case TipoTk.TkDiferente:
                             difOperatorCounter++;
@@ -2066,7 +2097,7 @@ namespace Analyzer
 
                             operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
 
-                        break;
+                            break;
 
                         case TipoTk.TkMenor:
                             lessThanOperatorCounter++;
@@ -2074,7 +2105,7 @@ namespace Analyzer
 
                             operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
 
-                        break;
+                            break;
 
                         case TipoTk.TkMaior:
                             biggerThanOperatorCounter++;
@@ -2082,17 +2113,17 @@ namespace Analyzer
 
                             operationRelationalPosInCurrentLine = operationsInCurrentLine.Count - 1;
 
-                        break;
-                        
+                            break;
+
                         case TipoTk.TkAtrib:
                             attribuitionOperatorCounter++;
                             operationsInCurrentLine.Add(new Operation(lexicalTokens[i - 1].valor, lexicalTokens[i + 1].valor, lexicalTokens[i - 1].coluna, lexicalTokens[i + 1].coluna, lexicalTokens[i].tipo, OperationPrecedence.TK_ATTRIBUTION_PRECEDENCE));
-                        break;
+                            break;
 
                         case TipoTk.TkId:
                             idElementsCounter++;
                             verifyTkId(lexicalTokens[i]);
-                        break;
+                            break;
 
                         case TipoTk.TkSe:
                             ifElementCounter++;
@@ -2101,7 +2132,7 @@ namespace Analyzer
 
                             printerCurrentIdentationLevel = null;
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
-                        break;
+                            break;
 
                         case TipoTk.TkSenao:
                             elseElementCounter++;
@@ -2114,9 +2145,11 @@ namespace Analyzer
                             if (printerLastLineWithElseIf != -1)
                             {
                                 addSimpleJumpForward(currentLine);
+
+                                printerWaitingForElseAfterElseIf = true;
                             }
 
-                        break;
+                            break;
 
                         case TipoTk.TkSenaoSe:
                             ifElementCounter++;
@@ -2126,7 +2159,7 @@ namespace Analyzer
                             printerLastLineWithElseIf = currentLine;
                             printerCurrentIdentationLevel = null;
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
-                        break;
+                            break;
 
                         case TipoTk.TkDesident:
                             desidentElementCounter++;
@@ -2139,6 +2172,16 @@ namespace Analyzer
                             {
                                 printerWaitingForElseDesident = false;
                                 printerWaitingOffsetForJumpForward = true;
+                            }
+
+                            break;
+
+                        case TipoTk.TkIdent:
+
+                            printerLineInByteCodeRegisterWithElseDesident = -1;
+
+                            if(printerWaitingForElseAfterElseIf){
+                                //printerWaitingForElseAfterElseIf = false;
                             }
 
                         break;
