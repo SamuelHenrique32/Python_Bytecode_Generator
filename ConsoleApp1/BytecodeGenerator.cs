@@ -93,6 +93,8 @@ namespace Analyzer
 
         public int elseIfElementCounter = 0;
 
+        public int whileElementCounter = 0;
+
         //--------------------------------------------------------------------------------------
         // Elements in line counter for if statements
         public int addOperatorCounterLeft = 0;
@@ -176,6 +178,8 @@ namespace Analyzer
         public Boolean printerCountLinesInElseIf = false;
         
         public int printerQuantityOfLinesInElseIf = 0;
+
+        public Boolean printerWhileInProgress = false;
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -899,6 +903,18 @@ namespace Analyzer
                 case 11:
                     return 3;
                     break;
+
+                case 12:
+                    return 3;
+                    break;
+
+                case 13:
+                    return 3;
+                    break;
+
+                case 14:
+                    return 1;
+                    break;
             }
 
             return -1;
@@ -933,7 +949,7 @@ namespace Analyzer
                         printerQuantityOfLinesInElseIf++;
                     }
 
-                    verifyOperatorsInCurrentLine(currentLineInFile);                    
+                    verifyOperatorsInCurrentLine(currentLineInFile);
 
                     if (desidentElementCounter > 0)
                     {
@@ -944,7 +960,21 @@ namespace Analyzer
 
                     if (elseElementCounter == 0)
                     {
+                        if (whileElementCounter > 0)
+                        {
+                            addSetupLoop(i);
+
+                            //printerWhileInProgress = true;
+                        }
+
                         handleLine(i);
+
+                        if (printerWhileInProgress && desidentElementCounter>0)
+                        {
+                            printerWhileInProgress = false;
+
+                            addEndWhileRegisters(i);
+                        }
 
                         if (printerWaitingOffsetForJumpForward)
                         {
@@ -957,12 +987,13 @@ namespace Analyzer
                             else
                             {
                                 printerIndexToGetOffsetForJumpForward = bytecodeRegisters.Count + 1;
-                            }
+                            }                            
+                        }                        
+                    }
 
-                            
-                        }
-
-                        
+                    if (whileElementCounter > 0)
+                    {
+                        printerWhileInProgress = true;
                     }
 
                     currentLineInFile++;
@@ -972,6 +1003,57 @@ namespace Analyzer
             }
 
             printGeneratedBytecode();
+        }
+
+        public void addEndWhileRegisters(int currentLine)
+        {
+            // Adds JUMP_ABSOLUTE
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLine;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // Adds RETURN_VALUE
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLine;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.POP_BLOCK;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+        }
+
+        public void addSetupLoop(int currentLineInFile)
+        {
+            // Adds JUMP_FORWARD
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLineInFile;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.SETUP_LOOP;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         // Handle desident for IF
@@ -1145,6 +1227,99 @@ namespace Analyzer
                         else if (desidentElementCounter == 1)
                         {
                             mountBytecode(line, operationsInCurrentLine[2].operand1, null, null, false, true);
+                        }
+
+                        printerLoadName = false;
+                    }
+                    // It's a const
+                    else
+                    {
+                        printerLoadConst = true;
+
+                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, true, true);
+
+                        printerLoadConst = false;
+                    }
+                }
+                else
+                {
+                    // Expression in the left
+                    int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(false);
+                    int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(false);
+
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, 1, operationRelationalPosInCurrentLine);
+
+                    // If the operands aren't null, the bytecode element was already added
+                    if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
+                    {
+                        mountBytecode(line, null, null, null, false, true);
+                    }
+                }
+
+                // There is one element in the right
+                if (operationsInCurrentLine[operationsInCurrentLine.Count - 1].currentOperator == printerCompElement)
+                {
+                    // It's an identifier
+                    if (isIdentifier(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2))
+                    {
+                        printerLoadName = true;
+
+                        mountBytecode(line, operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2, null, null, false, true);
+
+                        printerLoadName = false;
+                    }
+                    // It's a const
+                    else
+                    {
+                        printerLoadConst = true;
+
+                        mountBytecode(line, operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2, null, null, true, true);
+
+                        printerLoadConst = false;
+                    }
+                }
+                else
+                {
+                    // Expression in the right
+                    int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(true);
+                    int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(true);
+
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, operationRelationalPosInCurrentLine + 1, operationsInCurrentLine.Count);
+
+                    // If the operands aren't null, the bytecode element was already added
+                    if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
+                    {
+                        mountBytecode(line, null, null, null, false, true);
+                    }
+                }
+
+                printerShowCompareOp = true;
+
+                mountBytecode(line, null, null, null, false, true);
+
+                printerPopJumpIfFalse = true;
+
+                mountBytecode(line, null, null, null, false, true);
+            }
+            else if (whileElementCounter > 0)
+            {
+                verifyCompElement();
+
+                // There is one element in the left
+                if (((desidentElementCounter == 0) && (operationsInCurrentLine[1].currentOperator == printerCompElement)) || ((desidentElementCounter == 1) && (operationsInCurrentLine[1].currentOperator == printerCompElement)))
+                {
+                    // It's an identifier
+                    if (isIdentifier(operationsInCurrentLine[1].operand1))
+                    {
+                        printerLoadName = true;
+
+                        if (desidentElementCounter == 0)
+                        {
+                            mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+                        }
+                        else if (desidentElementCounter == 1)
+                        {
+                            mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
                         }
 
                         printerLoadName = false;
@@ -1763,6 +1938,10 @@ namespace Analyzer
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
+                else if(bytecodeRegister.opCode == (int)OpCode.JUMP_ABSOLUTE)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
+                }
                 else
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
@@ -1957,6 +2136,18 @@ namespace Analyzer
                 case OpCode.JUMP_FORWARD:
                     // What to do?
                     break;
+
+                case OpCode.SETUP_LOOP:
+                    // What to do?
+                    break;
+
+                case OpCode.JUMP_ABSOLUTE:
+                    // What to do?
+                    break;
+
+                case OpCode.POP_BLOCK:
+                    // What to do?
+                    break;
             }
         }
 
@@ -2010,6 +2201,18 @@ namespace Analyzer
 
                 case 11:
                     return "JUMP_FORWARD";
+                    break;
+
+                case 12:
+                    return "SETUP_LOOP";
+                    break;
+
+                case 13:
+                    return "JUMP_ABSOLUTE";
+                    break;
+
+                case 14:
+                    return "POP_BLOCK";
                     break;
             }
 
@@ -2230,6 +2433,14 @@ namespace Analyzer
                             }
 
                         break;
+
+                        case TipoTk.TkEnquanto:
+
+                            whileElementCounter++;
+
+                            //printerWhileInProgress = true;
+
+                            break;
                     }
                 }
             }
@@ -2292,6 +2503,8 @@ namespace Analyzer
             elseElementCounter = 0;
 
             elseIfElementCounter = 0;
+
+            whileElementCounter = 0;
         }
     }    
 }

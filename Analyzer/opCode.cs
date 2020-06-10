@@ -19,6 +19,9 @@ namespace Analyzer
         COMPARE_OP,
         POP_JUMP_IF_FALSE,
         RETURN_VALUE,
-        JUMP_FORWARD
+        JUMP_FORWARD,
+        SETUP_LOOP,
+        JUMP_ABSOLUTE,
+        POP_BLOCK
     }
 }
