@@ -1960,6 +1960,8 @@ namespace Analyzer
 
             handleJumpForward();
 
+            handleSetupLoop();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -2029,6 +2031,38 @@ namespace Analyzer
                 }
 
                 Console.WriteLine(bytecodeRegister.preview);
+            }
+        }
+
+        public void handleSetupLoop()
+        {
+            Boolean next = false;
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                {
+                    for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                        {
+                            j++;
+
+                            bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
             }
         }
 
