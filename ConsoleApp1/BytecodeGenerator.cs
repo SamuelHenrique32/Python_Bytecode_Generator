@@ -1958,6 +1958,8 @@ namespace Analyzer
                 insertStackPosInPopJumpIfFalseOfElseIf();
             }
 
+            handleJumpForward();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -2004,6 +2006,12 @@ namespace Analyzer
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
                 }
+                else if(bytecodeRegister.opCode == (int)OpCode.POP_BLOCK)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\n");
+
+                    continue;
+                }
                 else
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
@@ -2022,6 +2030,51 @@ namespace Analyzer
 
                 Console.WriteLine(bytecodeRegister.preview);
             }
+        }
+
+        public void handleJumpForward()
+        {
+            Boolean next = false;
+
+            for(int i=0; i<bytecodeRegisters.Count-1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
+                {
+                    int lineToGetOffset = getValidLineToJumpForward(bytecodeRegisters[i].lineInFile);
+
+                    for(int j=i; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].lineInFile == lineToGetOffset)
+                        {
+                            bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        public int getValidLineToJumpForward(int line)
+        {
+            for(int i=line; i<=bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile; i++)
+            {
+                if((lineTypes[i]!=LineType.ElseIfStatement) && (lineTypes[i] != LineType.ElseStatement))
+                {
+                    return i+1;
+                }
+            }
+
+            return -1;
         }
 
         public void insertStackPosInPopJumpIfFalseOfElseIf()
