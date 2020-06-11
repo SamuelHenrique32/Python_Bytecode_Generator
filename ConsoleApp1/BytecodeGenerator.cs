@@ -21,6 +21,8 @@ namespace Analyzer
 
         public List<BytecodeRegister> bytecodeRegisters = new List<BytecodeRegister>();
 
+        public List<LineType> lineTypes = new List<LineType>();
+
         public Boolean lexicAnalyzed = false;
 
         public Boolean syntacticAnalyzed = false;
@@ -88,6 +90,8 @@ namespace Analyzer
         public int ifElementCounter = 0;
 
         public int desidentElementCounter = 0;
+
+        public int identElementCounter = 0;
 
         public int elseElementCounter = 0;
 
@@ -180,6 +184,28 @@ namespace Analyzer
         public int printerQuantityOfLinesInElseIf = 0;
 
         public Boolean printerWhileInProgress = false;
+        //--------------------------------------------------------------------------------------
+
+        //--------------------------------------------------------------------------------------
+        // Lynes type
+        public Boolean lyneTypeIfIdent = false;
+
+        public Boolean lyneTypeElseIfIdent = false;
+
+        public Boolean lyneTypeElseIdent = false;
+
+        public Boolean lyneTypeWhileIdent = false;
+
+        public Boolean lyneTypeLastLineHasIf = false;
+
+        public Boolean lyneTypeLastLineHasElseIf = false;
+
+        public Boolean lyneTypeLastLineHasElse = false;
+
+        public Boolean lyneTypeLastLineHasWhile = false;
+
+        public Boolean lyneTypeAddEnable = true;
+
         //--------------------------------------------------------------------------------------
 
         public BytecodeGenerator()
@@ -933,6 +959,8 @@ namespace Analyzer
             {
                 j = 0;
 
+                lyneTypeAddEnable = true;
+
                 // Find the first lexical token that has the line according to current line in file
                 while (lexicalTokens[j].linha != currentLineInFile)
                 {
@@ -969,6 +997,8 @@ namespace Analyzer
 
                         handleLine(i);
 
+                        addLineType();
+
                         if (printerWhileInProgress && desidentElementCounter>0)
                         {
                             printerWhileInProgress = false;
@@ -1003,6 +1033,38 @@ namespace Analyzer
             }
 
             printGeneratedBytecode();
+        }
+
+        public void addLineType()
+        {
+            if((desidentElementCounter == 1) && (identElementCounter == 1))
+            {
+                lyneTypeAddEnable = true;
+            }
+
+            if (lyneTypeAddEnable)
+            {
+                if (lyneTypeIfIdent)
+                {
+                    lineTypes.Add(LineType.IfStatement);
+                }
+                else if (lyneTypeElseIfIdent)
+                {
+                    lineTypes.Add(LineType.ElseIfStatement);
+                }
+                else if(lyneTypeElseIdent)
+                {
+                    lineTypes.Add(LineType.ElseStatement);
+                }
+                else if (lyneTypeWhileIdent)
+                {
+                    lineTypes.Add(LineType.WhileStatement);
+                }
+                else
+                {
+                    lineTypes.Add(LineType.Expression);
+                }
+            }
         }
 
         public void addEndWhileRegisters(int currentLine)
@@ -2377,6 +2439,15 @@ namespace Analyzer
 
                             printerCurrentIdentationLevel = null;
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
+
+                            lineTypeReset();
+
+                            lyneTypeLastLineHasIf = true;
+
+                            lineTypes.Add(LineType.IfStatement);
+
+                            lyneTypeAddEnable = false;
+
                             break;
 
                         case TipoTk.TkSenao:
@@ -2396,6 +2467,14 @@ namespace Analyzer
 
                             printerCountLinesInElseIf = false;
 
+                            lineTypeReset();
+
+                            lyneTypeLastLineHasElse = true;
+
+                            lineTypes.Add(LineType.ElseStatement);
+
+                            lyneTypeAddEnable = false;
+
                             break;
 
                         case TipoTk.TkSenaoSe:
@@ -2407,6 +2486,10 @@ namespace Analyzer
                             printerCurrentIdentationLevel = null;
                             printerCurrentIdentationLevel = new IdentDesidentLevel(currentLine, TipoTk.TkSe);
                             printerCountLinesInElseIf = true;
+                            lineTypeReset();
+                            lyneTypeLastLineHasElseIf = true;
+                            lineTypes.Add(LineType.ElseIfStatement);
+                            lyneTypeAddEnable = false;
                             break;
 
                         case TipoTk.TkDesident:
@@ -2422,9 +2505,30 @@ namespace Analyzer
                                 printerWaitingOffsetForJumpForward = true;
                             }
 
+                            lyneTypeAddEnable = false;
+
                             break;
 
                         case TipoTk.TkIdent:
+
+                            identElementCounter++;
+
+                            if (lyneTypeLastLineHasIf)
+                            {
+                                lyneTypeIfIdent = true;
+                            }
+                            else if (lyneTypeLastLineHasElseIf)
+                            {
+                                lyneTypeElseIfIdent = true;
+                            }
+                            else if (lyneTypeLastLineHasElse)
+                            {
+                                lyneTypeElseIdent = true;
+                            }
+                            else if (lyneTypeLastLineHasWhile)
+                            {
+                                lyneTypeWhileIdent = true;
+                            }
 
                             printerLineInByteCodeRegisterWithElseDesident = -1;
 
@@ -2438,12 +2542,39 @@ namespace Analyzer
 
                             whileElementCounter++;
 
+                            lineTypeReset();
+
+                            lyneTypeLastLineHasWhile = true;
+
                             //printerWhileInProgress = true;
+
+                            lineTypes.Add(LineType.WhileStatement);
+
+                            lyneTypeAddEnable = false;
 
                             break;
                     }
                 }
             }
+        }
+
+        public void lineTypeReset()
+        {
+            lyneTypeIfIdent = false;
+
+            lyneTypeElseIfIdent = false;
+
+            lyneTypeElseIdent = false;
+
+            lyneTypeWhileIdent = false;
+
+            lyneTypeLastLineHasIf = false;
+
+            lyneTypeLastLineHasElseIf = false;
+
+            lyneTypeLastLineHasElse = false;
+
+            lyneTypeLastLineHasWhile = false;
         }
 
         public void resetLineElements()
@@ -2499,6 +2630,8 @@ namespace Analyzer
             operationRelationalPosInCurrentLine = 0;
 
             desidentElementCounter = 0;
+
+            identElementCounter = 0;
 
             elseElementCounter = 0;
 
