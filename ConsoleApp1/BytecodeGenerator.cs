@@ -1964,6 +1964,8 @@ namespace Analyzer
 
             handleJumpAbsolute();
 
+            popJumpIfFalseCorrection();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -2034,6 +2036,109 @@ namespace Analyzer
 
                 Console.WriteLine(bytecodeRegister.preview);
             }
+        }
+
+        public void popJumpIfFalseCorrection()
+        {
+            Boolean next = false;
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                {
+                    int lineToGetOffset = getValidLineToPopJumpIfFalse(bytecodeRegisters[i].lineInFile);
+
+                    if(lineToGetOffset == -1)
+                    {
+                        for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                        {
+                            if(bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                            {
+                                bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                                next = true;
+
+                                break;
+                            }
+                        }
+
+                        if (next)
+                        {
+                            continue;
+                        }
+                    }
+
+                    for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].lineInFile == lineToGetOffset)
+                        {
+                            bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        public int getValidLineToPopJumpIfFalse(int line)
+        {
+            int value = 0;
+
+            if(lineTypes[line] == LineType.IfStatement)
+            {
+                value = (getValidLineToPopJumpIfFalseIfStatement(line));
+            }
+            else if(lineTypes[line] == LineType.ElseIfStatement)
+            {
+                value = (getValidLineToPopJumpIfFalseElseIfStatement(line));
+            }
+            else if(lineTypes[line] == LineType.WhileStatement)
+            {
+                value = -1;
+            }
+
+            if((value != -1) && (lineTypes[value] == LineType.ElseStatement) && (lineTypes[value-2] != LineType.ElseStatement))
+            {
+                value++;
+            }            
+
+            return value;
+        }
+
+        public int getValidLineToPopJumpIfFalseIfStatement(int line)
+        {
+            for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile-1; i++)
+            {
+                if (lineTypes[i] != LineType.IfStatement)
+                {
+                    return i + 1;
+                }
+            }
+
+            return -1;
+        }
+
+        public int getValidLineToPopJumpIfFalseElseIfStatement(int line)
+        {
+            for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count-1].lineInFile-1; i++)
+            {
+                if (lineTypes[i] != LineType.ElseIfStatement)
+                {
+                    return i + 1;
+                }
+            }
+
+            return -1;
         }
 
         public void handleJumpAbsolute()
