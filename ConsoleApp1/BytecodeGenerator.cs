@@ -941,6 +941,22 @@ namespace Analyzer
                 case 14:
                     return 1;
                     break;
+
+                case 15:
+                    return 3;
+                    break;
+
+                case 16:
+                    return 3;
+                    break;
+
+                case 17:
+                    return 1;
+                    break;
+
+                case 18:
+                    return 3;
+                    break;
             }
 
             return -1;
@@ -2412,27 +2428,33 @@ namespace Analyzer
                     break;
 
                 case OpCode.POP_JUMP_IF_FALSE:
-                    // What to do?
                     break;
 
                 case OpCode.RETURN_VALUE:
-                    // What to do?
                     break;
 
                 case OpCode.JUMP_FORWARD:
-                    // What to do?
                     break;
 
                 case OpCode.SETUP_LOOP:
-                    // What to do?
                     break;
 
                 case OpCode.JUMP_ABSOLUTE:
-                    // What to do?
                     break;
 
                 case OpCode.POP_BLOCK:
-                    // What to do?
+                    break;
+
+                case OpCode.LOAD_GLOBAL:
+                    break;
+
+                case OpCode.CALL_FUNCTION:
+                    break;
+
+                case OpCode.GET_ITER:
+                    break;
+
+                case OpCode.FOR_ITER:
                     break;
             }
         }
@@ -2499,6 +2521,22 @@ namespace Analyzer
 
                 case 14:
                     return "POP_BLOCK";
+                    break;
+
+                case 15:
+                    return "LOAD_GLOBAL";
+                    break;
+
+                case 16:
+                    return "CALL_FUNCTION";
+                    break;
+
+                case 17:
+                    return "GET_ITER";
+                    break;
+
+                case 18:
+                    return "FOR_ITER";
                     break;
             }
 

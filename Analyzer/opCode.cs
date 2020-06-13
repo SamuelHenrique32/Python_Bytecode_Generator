@@ -22,6 +22,10 @@ namespace Analyzer
         JUMP_FORWARD,
         SETUP_LOOP,
         JUMP_ABSOLUTE,
-        POP_BLOCK
+        POP_BLOCK,
+        LOAD_GLOBAL,
+        CALL_FUNCTION,
+        GET_ITER,
+        FOR_ITER
     }
 }
