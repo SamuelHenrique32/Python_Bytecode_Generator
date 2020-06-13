@@ -99,6 +99,8 @@ namespace Analyzer
 
         public int whileElementCounter = 0;
 
+        public int rangeElementCouter = 0;
+
         //--------------------------------------------------------------------------------------
         // Elements in line counter for if statements
         public int addOperatorCounterLeft = 0;
@@ -184,6 +186,10 @@ namespace Analyzer
         public int printerQuantityOfLinesInElseIf = 0;
 
         public Boolean printerWhileInProgress = false;
+
+        public String printerForTopLimit = null;
+
+        public Boolean printerFoundOpenParenthesis = false;
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
@@ -196,6 +202,8 @@ namespace Analyzer
 
         public Boolean lyneTypeWhileIdent = false;
 
+        public Boolean lyneTypeForIdent = false;
+
         public Boolean lyneTypeLastLineHasIf = false;
 
         public Boolean lyneTypeLastLineHasElseIf = false;
@@ -203,6 +211,8 @@ namespace Analyzer
         public Boolean lyneTypeLastLineHasElse = false;
 
         public Boolean lyneTypeLastLineHasWhile = false;
+
+        public Boolean lyneTypeLastLineHasFor = false;
 
         public Boolean lyneTypeAddEnable = true;
 
@@ -970,9 +980,13 @@ namespace Analyzer
 
             int j = currentLineInFile - 1;
 
+            Boolean mustEnterInHandleLine = true;
+
             // For each line in file
             for (int i = 1; i <= getLastLineInFile(); i++)
             {
+                mustEnterInHandleLine = true;
+
                 j = 0;
 
                 lyneTypeAddEnable = true;
@@ -1002,6 +1016,32 @@ namespace Analyzer
                         handleDesident(i);
                     }
 
+                    if (printerWhileInProgress && (desidentElementCounter > 0))
+                    {
+                        printerWhileInProgress = false;
+
+                        addEndWhileRegisters(i-1);
+                    }
+
+                    if (rangeElementCouter > 0)
+                    {
+                        addForRangeInitialRegisters(i);
+
+                        if(operationsInCurrentLine.Count == 1)
+                        {
+                            mustEnterInHandleLine = false;
+
+                            if (isIdentifier(printerForTopLimit))
+                            {
+                                addSimpleLoadName(null, i, printerForTopLimit);
+                            }
+                            else
+                            {
+                                addSimpleLoadConst(Int16.Parse(printerForTopLimit), i);
+                            }
+                        }
+                    }
+
                     if (elseElementCounter == 0)
                     {
                         if (whileElementCounter > 0)
@@ -1011,11 +1051,14 @@ namespace Analyzer
                             //printerWhileInProgress = true;
                         }
 
-                        handleLine(i);
+                        if (mustEnterInHandleLine)
+                        {
+                            handleLine(i);
+                        }
 
                         addLineType();
 
-                        if (printerWhileInProgress && desidentElementCounter>0)
+                        if (printerWhileInProgress && (desidentElementCounter>0))
                         {
                             printerWhileInProgress = false;
 
@@ -1051,9 +1094,37 @@ namespace Analyzer
             printGeneratedBytecode();
         }
 
+        public void addForRangeInitialRegisters(int currentLine)
+        {
+            addSetupLoop(currentLine);
+
+            // Adds LOAD_GLOBAL
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = currentLineInFile;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.LOAD_GLOBAL;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(range)";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+        }
+
         public void addLineType()
         {
             if((desidentElementCounter == 1) && (identElementCounter == 1))
+            {
+                lyneTypeAddEnable = true;
+            }
+
+            if(rangeElementCouter == 1)
             {
                 lyneTypeAddEnable = true;
             }
@@ -1075,6 +1146,12 @@ namespace Analyzer
                 else if (lyneTypeWhileIdent)
                 {
                     lineTypes.Add(LineType.WhileStatement);
+                }
+                else if(rangeElementCouter>0 || lyneTypeForIdent)
+                {
+                    lyneTypeLastLineHasFor = true;
+
+                    lineTypes.Add(LineType.ForStatement);
                 }
                 else
                 {
@@ -1117,7 +1194,7 @@ namespace Analyzer
 
         public void addSetupLoop(int currentLineInFile)
         {
-            // Adds JUMP_FORWARD
+            // Adds SETUP_LOOP
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
             bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
@@ -1260,6 +1337,11 @@ namespace Analyzer
                         break;
                     }
                 }
+            }
+
+            if(rangeElementCouter>0 && operationsInCurrentLine.Count == 1)
+            {
+
             }
 
             // Simple atrib
@@ -2549,7 +2631,11 @@ namespace Analyzer
             {
                 if (lexicalTokens[i].linha == currentLine)
                 {
-                    // TODO Don't call operationsInCurrentLine so many times
+                    if((rangeElementCouter>0) && (printerFoundOpenParenthesis) && (printerForTopLimit==null))
+                    {
+                        printerForTopLimit = lexicalTokens[i].valor;
+                    }
+
                     switch (lexicalTokens[i].tipo)
                     {
                         case TipoTk.TkMais:
@@ -2791,6 +2877,10 @@ namespace Analyzer
                             {
                                 lyneTypeWhileIdent = true;
                             }
+                            else if (lyneTypeLastLineHasFor)
+                            {
+                                lyneTypeForIdent = true;
+                            }
 
                             printerLineInByteCodeRegisterWithElseDesident = -1;
 
@@ -2815,6 +2905,17 @@ namespace Analyzer
                             lyneTypeAddEnable = false;
 
                             break;
+
+                        case TipoTk.TkRange:
+                            rangeElementCouter++;
+                            lineTypeReset();
+                            lyneTypeLastLineHasFor = true;
+                            break;
+                    }
+
+                    if (lexicalTokens[i].tipo == TipoTk.TkAbreParenteses)
+                    {
+                        printerFoundOpenParenthesis = true;
                     }
                 }
             }
@@ -2830,6 +2931,8 @@ namespace Analyzer
 
             lyneTypeWhileIdent = false;
 
+            lyneTypeForIdent = false;
+
             lyneTypeLastLineHasIf = false;
 
             lyneTypeLastLineHasElseIf = false;
@@ -2837,6 +2940,8 @@ namespace Analyzer
             lyneTypeLastLineHasElse = false;
 
             lyneTypeLastLineHasWhile = false;
+
+            lyneTypeLastLineHasFor = false;
         }
 
         public void resetLineElements()
@@ -2900,6 +3005,10 @@ namespace Analyzer
             elseIfElementCounter = 0;
 
             whileElementCounter = 0;
+
+            rangeElementCouter = 0;
+
+            printerFoundOpenParenthesis = false;
         }
     }    
 }

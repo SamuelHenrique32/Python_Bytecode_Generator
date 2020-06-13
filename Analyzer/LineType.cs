@@ -12,6 +12,7 @@ namespace Analyzer
         IfStatement,
         ElseIfStatement,
         ElseStatement,
-        WhileStatement
+        WhileStatement,
+        ForStatement
     }
 }
