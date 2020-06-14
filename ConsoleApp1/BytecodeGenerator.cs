@@ -37,6 +37,8 @@ namespace Analyzer
 
         public int currentOffset = 0;
 
+        public int lineinFileGlobalToAddLoadName = 0;
+
         //--------------------------------------------------------------------------------------
         // Operations
         public Boolean operationAssignmentInProgress = false;
@@ -376,6 +378,11 @@ namespace Analyzer
 
         public Boolean getLastStackPosition(int? value)
         {
+            if (printerOperationsStack.Count == 0)
+            {
+                return false;
+            }
+
             if (printerOperationsStack.Peek() != value)
             {
                 return false;
@@ -989,6 +996,8 @@ namespace Analyzer
             // For each line in file
             for (int i = 1; i <= getLastLineInFile(); i++)
             {
+                lineinFileGlobalToAddLoadName = i;
+
                 mustEnterInHandleLine = true;
 
                 j = 0;
@@ -1060,6 +1069,11 @@ namespace Analyzer
                         if (mustEnterInHandleLine)
                         {
                             handleLine(i);
+
+                            if (rangeElementCouter > 0)
+                            {
+                                addForRangeIntermediateRegisters(i);
+                            }
                         }
 
                         addLineType();
@@ -1679,7 +1693,10 @@ namespace Analyzer
                 handleArithmeticalOperations(quantityWithOperationWithMulPrecedence, quantityWithOperationWithAddPrecedence, 0, operationsInCurrentLine.Count);
             }
 
-            mountBytecode(line, null, null, null, false, true);
+            if (rangeElementCouter == 0)
+            {
+                mountBytecode(line, null, null, null, false, true);
+            }            
         }
 
         private void verifyCompElement()
@@ -2006,6 +2023,14 @@ namespace Analyzer
             // If a identifier was used, it's necessary to mount the operation
             if ((arithmeticalIdentifierOperand1 != null) || (arithmeticalIdentifierOperand2 != null))
             {
+                if (arithmeticalIdentifierOperand1 != null && printerVariableToRange!=null)
+                {
+                    if (!getLastStackPosition(arithmeticalIdentifierOperand1))
+                    {
+                        addSimpleLoadName(arithmeticalIdentifierOperand1, lineinFileGlobalToAddLoadName, operation.operand1);
+                    }
+                }
+
                 printerShowOperationType = true;
 
                 printerLoadConst = false;
