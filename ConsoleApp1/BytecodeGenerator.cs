@@ -187,9 +187,13 @@ namespace Analyzer
 
         public Boolean printerWhileInProgress = false;
 
+        public Boolean printerForInProgress = false;
+
         public String printerForTopLimit = null;
 
         public Boolean printerFoundOpenParenthesis = false;
+
+        public String printerVariableToRange = null;
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
@@ -1039,6 +1043,8 @@ namespace Analyzer
                             {
                                 addSimpleLoadConst(Int16.Parse(printerForTopLimit), i);
                             }
+
+                            addForRangeIntermediateRegisters(i);
                         }
                     }
 
@@ -1065,6 +1071,13 @@ namespace Analyzer
                             addEndWhileRegisters(i);
                         }
 
+                        if (printerForInProgress && (desidentElementCounter > 0))
+                        {
+                            printerForInProgress = false;
+
+                            addForRangeFinalRegisters(i);
+                        }
+
                         if (printerWaitingOffsetForJumpForward)
                         {
                             printerWaitingOffsetForJumpForward = false;
@@ -1085,6 +1098,11 @@ namespace Analyzer
                         printerWhileInProgress = true;
                     }
 
+                    if (rangeElementCouter > 0)
+                    {
+                        printerForInProgress = true;
+                    }
+
                     currentLineInFile++;
 
                     continue;
@@ -1092,6 +1110,107 @@ namespace Analyzer
             }
 
             printGeneratedBytecode();
+        }
+
+        public void addForRangeFinalRegisters(int line)
+        {
+            // Adds JUMP_ABSOLUTE
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // Adds POP_BLOCK
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.POP_BLOCK;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+        }
+
+        public void addForRangeIntermediateRegisters(int line)
+        {
+            // Call function
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.CALL_FUNCTION;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(1 positional, 0 keyword pair)";
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // Get iter
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.GET_ITER;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // For iter
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.FOR_ITER;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+            // Store name
+            bytecodeRegisterCurrentToken = null;
+
+            bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.STORE_NAME;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(" + printerVariableToRange + ")";
+
+            // Update symbols table
+            //updateIdentifierValue(printerVariableToRange, identifierValue);
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         public void addForRangeInitialRegisters(int currentLine)
@@ -1178,7 +1297,7 @@ namespace Analyzer
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-            // Adds RETURN_VALUE
+            // Adds POP_BLOCK
             bytecodeRegisterCurrentToken = null;
 
             bytecodeRegisterCurrentToken = new BytecodeRegister();
@@ -2064,6 +2183,8 @@ namespace Analyzer
 
             popJumpIfFalseCorrection();
 
+            handleForIter();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -2116,6 +2237,16 @@ namespace Analyzer
 
                     continue;
                 }
+                else if (bytecodeRegister.opCode == (int)OpCode.GET_ITER)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\n");
+
+                    continue;
+                }
+                else if (bytecodeRegister.opCode == (int)OpCode.CALL_FUNCTION)
+                {
+                    Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
+                }
                 else
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t\t");
@@ -2133,6 +2264,36 @@ namespace Analyzer
                 }
 
                 Console.WriteLine(bytecodeRegister.preview);
+            }
+        }
+
+        public void handleForIter()
+        {
+            Boolean next = false;
+
+            for(int i=0; i<bytecodeRegisters.Count; i++)
+            {
+                next = false;
+
+                if(bytecodeRegisters[i].opCode == (int)OpCode.FOR_ITER)
+                {
+                    for(int j=i; j<bytecodeRegisters.Count; j++)
+                    {
+                        if(bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                        {
+                            bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+                }
+
+                if (next)
+                {
+                    continue;
+                }
             }
         }
 
@@ -2247,13 +2408,20 @@ namespace Analyzer
             {
                 next = false;
 
-                if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                if ((bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP) || (bytecodeRegisters[i].opCode == (int)OpCode.FOR_ITER))
                 {
                     for (int j = i + 1; j < bytecodeRegisters.Count - 1; j++)
                     {
                         if(bytecodeRegisters[j].opCode == (int)OpCode.JUMP_ABSOLUTE)
                         {
-                            bytecodeRegisters[j].stackPos = bytecodeRegisters[i + 1].offset;
+                            if(bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                            {
+                                bytecodeRegisters[j].stackPos = bytecodeRegisters[i + 1].offset;
+                            }
+                            else
+                            {
+                                bytecodeRegisters[j].stackPos = bytecodeRegisters[i].offset;
+                            }                            
 
                             next = true;
 
@@ -2910,6 +3078,7 @@ namespace Analyzer
                             rangeElementCouter++;
                             lineTypeReset();
                             lyneTypeLastLineHasFor = true;
+                            printerVariableToRange = lexicalTokens[i - 2].valor;
                             break;
                     }
 
