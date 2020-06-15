@@ -26,6 +26,10 @@ namespace Analyzer
         LOAD_GLOBAL,
         CALL_FUNCTION,
         GET_ITER,
-        FOR_ITER
+        FOR_ITER,
+        INPLACE_ADD,
+        INPLACE_SUBTRACT,
+        INPLACE_MULTIPLY,
+        INPLACE_TRUE_DIVIDE
     }
 }

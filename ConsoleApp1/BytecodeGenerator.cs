@@ -230,12 +230,14 @@ namespace Analyzer
 
         public int getQuantityOfOperationsWithMulPrecedence()
         {
-            return (multiplicationOperatorCounter + divOperatorCounter + reducedMultiplicationOperatorCounter + reducedDivOperatorCounter);
+            //return (multiplicationOperatorCounter + divOperatorCounter + reducedMultiplicationOperatorCounter + reducedDivOperatorCounter);
+            return (multiplicationOperatorCounter + divOperatorCounter);
         }
 
         public int getQuantityOfOperationsWithAddPrecedence()
         {
-            return (addOperatorCounter + subtractionOperatorCounter + reducedAddOperatorCounter + reducedSubtractionOperatorCounter);
+            //return (addOperatorCounter + subtractionOperatorCounter + reducedAddOperatorCounter + reducedSubtractionOperatorCounter);
+            return (addOperatorCounter + subtractionOperatorCounter);
         }
 
         public int getQuantityOfOperationsWithMulPrecedenceIfStatement(Boolean leftRightOption)
@@ -833,7 +835,11 @@ namespace Analyzer
         {
             for (int i = 0; i < operationsInCurrentLine.Count; i++)
             {
-                if (operationsInCurrentLine[i].currentOperator == TipoTk.TkAtrib)
+                if ((operationsInCurrentLine[i].currentOperator == TipoTk.TkAtrib) ||
+                    (operationsInCurrentLine[i].currentOperator == TipoTk.TkMaisIgual) ||
+                    (operationsInCurrentLine[i].currentOperator == TipoTk.TkMenosIgual) ||
+                    (operationsInCurrentLine[i].currentOperator == TipoTk.TkMulIgual) ||
+                    (operationsInCurrentLine[i].currentOperator == TipoTk.TkDivIgual))
                 {
                     return i;
                 }
@@ -978,6 +984,22 @@ namespace Analyzer
                 case 18:
                     return 3;
                     break;
+
+                case 19:
+                    return 1;
+                    break;
+
+                case 20:
+                    return 1;
+                    break;
+
+                case 21:
+                    return 1;
+                    break;
+
+                case 22:
+                    return 1;
+                    break;
             }
 
             return -1;
@@ -1066,6 +1088,15 @@ namespace Analyzer
                             //printerWhileInProgress = true;
                         }
 
+                        if (printerForInProgress && (desidentElementCounter > 0) && printerAnyReducedOperationInCurrentLine())
+                        {
+                            printerForInProgress = false;
+
+                            addForRangeFinalRegisters(i-1);
+                        }
+
+                        verifyLoadForReducedOperations(i);
+
                         if (mustEnterInHandleLine)
                         {
                             handleLine(i);
@@ -1117,6 +1148,8 @@ namespace Analyzer
                         printerForInProgress = true;
                     }
 
+                    verifyReduceOperationsFinalRegisters();
+
                     currentLineInFile++;
 
                     continue;
@@ -1124,6 +1157,79 @@ namespace Analyzer
             }
 
             printGeneratedBytecode();
+        }
+        public Boolean printerAnyReducedOperationInCurrentLine()
+        {
+            if(reducedAddOperatorCounter>0 || reducedSubtractionOperatorCounter>0 || reducedMultiplicationOperatorCounter>0 || reducedDivOperatorCounter > 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public void verifyReduceOperationsFinalRegisters()
+        {
+            int operand1Index = 0;
+
+            if(operationsInCurrentLine[0].currentOperator == TipoTk.TkDesident)
+            {
+                operand1Index = 1;
+            }
+
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile;
+
+            if (reducedAddOperatorCounter>0)
+            {
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_ADD;
+
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+            }
+            else if (reducedSubtractionOperatorCounter>0)
+            {
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_SUBTRACT;
+
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+            }
+            else if (reducedMultiplicationOperatorCounter>0)
+            {
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_MULTIPLY;
+
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+            }
+            else if (reducedDivOperatorCounter>0)
+            {
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_TRUE_DIVIDE;
+
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+
+                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+            }
+        }
+
+        public void verifyLoadForReducedOperations(int line)
+        {
+            if (reducedAddOperatorCounter > 0 || reducedSubtractionOperatorCounter > 0 || reducedMultiplicationOperatorCounter > 0 || reducedDivOperatorCounter > 0)
+            {
+                if(operationsInCurrentLine[0].currentOperator != TipoTk.TkDesident)
+                {
+                    addSimpleLoadName(null, line, operationsInCurrentLine[0].operand1);
+                }
+                else
+                {
+                    addSimpleLoadName(null, line, operationsInCurrentLine[1].operand1);
+                }
+            }
         }
 
         public void addForRangeFinalRegisters(int line)
@@ -1262,6 +1368,14 @@ namespace Analyzer
                 lyneTypeAddEnable = true;
             }
 
+            if((reducedAddOperatorCounter > 0) ||
+               (reducedSubtractionOperatorCounter > 0) ||
+               (reducedMultiplicationOperatorCounter > 0) ||
+               (reducedDivOperatorCounter > 0))
+            {
+                lyneTypeAddEnable = true;
+            }
+
             if (lyneTypeAddEnable)
             {
                 if (lyneTypeIfIdent)
@@ -1359,6 +1473,34 @@ namespace Analyzer
 
                 printerIdentationRegisters.Pop();
             }
+        }
+
+        public void addSimpleStoreName(String identifier, int? value)
+        {
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = lineinFileGlobalToAddLoadName;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.STORE_NAME;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.preview = "(" + identifier + ")";
+
+            // Update symbols table
+            if(printerLastExpressionResult == null)
+            {
+                updateIdentifierValue(identifier, Int16.Parse(operationsInCurrentLine[0].operand2));
+            }
+            else
+            {
+                //updateIdentifierValue(printerVariableToRange, identifierValue);
+            }
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
         public void addSimpleJumpForward(int currentLineInFile)
@@ -2248,6 +2390,12 @@ namespace Analyzer
 
                     continue;
                 }
+                else if ((bytecodeRegister.opCode == (int)OpCode.INPLACE_ADD) || (bytecodeRegister.opCode == (int)OpCode.INPLACE_SUBTRACT) || (bytecodeRegister.opCode == (int)OpCode.INPLACE_MULTIPLY) || (bytecodeRegister.opCode == (int)OpCode.INPLACE_TRUE_DIVIDE))
+                {
+                    Console.WriteLine(getOpCodeDescription(bytecodeRegister.opCode));
+
+                    continue;
+                }
                 else if (bytecodeRegister.opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     Console.Write(getOpCodeDescription(bytecodeRegister.opCode) + "\t");
@@ -2731,6 +2879,18 @@ namespace Analyzer
 
                 case OpCode.FOR_ITER:
                     break;
+
+                case OpCode.INPLACE_ADD:
+                    break;
+
+                case OpCode.INPLACE_SUBTRACT:
+                    break;
+
+                case OpCode.INPLACE_MULTIPLY:
+                    break;
+
+                case OpCode.INPLACE_TRUE_DIVIDE:
+                    break;
             }
         }
 
@@ -2813,6 +2973,23 @@ namespace Analyzer
                 case 18:
                     return "FOR_ITER";
                     break;
+
+                case 19:
+                    return "INPLACE_ADD";
+                    break;
+
+                case 20:
+                    return "INPLACE_SUBTRACT";
+                    break;
+
+                case 21:
+                    return "INPLACE_MULTIPLY";
+                    break;
+
+                case 22:
+                    return "INPLACE_TRUE_DIVIDE";
+                    break;
+
             }
 
             return "";
@@ -3047,6 +3224,11 @@ namespace Analyzer
                             }
 
                             lyneTypeAddEnable = false;
+
+                            if (lyneTypeForIdent)
+                            {
+                                lyneTypeForIdent = false;
+                            }
 
                             break;
 
