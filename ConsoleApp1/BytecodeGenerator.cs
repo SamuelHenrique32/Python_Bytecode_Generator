@@ -1189,7 +1189,7 @@ namespace Analyzer
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+                addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_ADD);
             }
             else if (reducedSubtractionOperatorCounter>0)
             {
@@ -1197,7 +1197,7 @@ namespace Analyzer
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+                addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_SUBTRACT);
             }
             else if (reducedMultiplicationOperatorCounter>0)
             {
@@ -1205,7 +1205,7 @@ namespace Analyzer
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+                addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_MULTIPLY);
             }
             else if (reducedDivOperatorCounter>0)
             {
@@ -1213,8 +1213,28 @@ namespace Analyzer
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                addSimpleStoreName(operationsInCurrentLine[operand1Index].operand1, null);
+                addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_TRUE_DIVIDE);
             }
+        }
+
+        public Boolean verifySimpleReducedOperation()
+        {
+            int counter = 0;
+
+            for(int i=0; i<operationsInCurrentLine.Count; i++)
+            {
+                if(operationsInCurrentLine[i].currentOperator != TipoTk.TkDesident)
+                {
+                    counter++;
+                }
+            }
+
+            if(counter == 1)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public void verifyLoadForReducedOperations(int line)
@@ -1475,7 +1495,31 @@ namespace Analyzer
             }
         }
 
-        public void addSimpleStoreName(String identifier, int? value)
+        public int? handleOperandInStoreNameForReducedOperations(int? value1, int? value2, OpCode opCode)
+        {
+            switch (opCode)
+            {
+                case OpCode.INPLACE_ADD:
+                    return (value1 + value2);
+                    break;
+
+                case OpCode.INPLACE_SUBTRACT:
+                    return (value1 - value2);
+                    break;
+
+                case OpCode.INPLACE_MULTIPLY:
+                    return (value1 * value2);
+                    break;
+
+                case OpCode.INPLACE_TRUE_DIVIDE:
+                    return (value1 / value2);
+                    break;
+            }
+
+            return null;
+        }
+
+        public void addSimpleStoreNameForReducedOperations(String identifier, int? value, OpCode opCode)
         {
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
@@ -1491,13 +1535,20 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.preview = "(" + identifier + ")";
 
             // Update symbols table
-            if(printerLastExpressionResult == null)
+            if (!verifySimpleReducedOperation())
             {
-                updateIdentifierValue(identifier, Int16.Parse(operationsInCurrentLine[0].operand2));
+                updateIdentifierValue(identifier, handleOperandInStoreNameForReducedOperations(getIdentifierValue(identifier), printerLastExpressionResult, opCode));
             }
             else
             {
-                //updateIdentifierValue(printerVariableToRange, identifierValue);
+                if(operationsInCurrentLine[0].currentOperator == TipoTk.TkDesident)
+                {
+                    updateIdentifierValue(identifier, handleOperandInStoreNameForReducedOperations(getIdentifierValue(identifier), Int16.Parse(operationsInCurrentLine[1].operand2), opCode));
+                }
+                else
+                {
+                    updateIdentifierValue(identifier, handleOperandInStoreNameForReducedOperations(getIdentifierValue(identifier), Int16.Parse(operationsInCurrentLine[0].operand2), opCode));
+                }
             }
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
