@@ -224,8 +224,171 @@ namespace Analyzer
 
         //--------------------------------------------------------------------------------------
 
+        //--------------------------------------------------------------------------------------
+        // Indentatation
+        public List<IndentationLevel> ifIndentationLevel = new List<IndentationLevel>();
+
+        public List<IndentationLevel> elseIfIndentationLevel = new List<IndentationLevel>();
+
+        public List<IndentationLevel> elseIndentationLevel = new List<IndentationLevel>();        
+
+        public List<IndentationLevel> forIndentationLevel = new List<IndentationLevel>();
+
+        public List<IndentationLevel> whileIndentationLevel = new List<IndentationLevel>();
+
+        //--------------------------------------------------------------------------------------
+
         public BytecodeGenerator()
         {
+        }
+
+        public void handleAddOfIdentationLevels(TipoTk tipoTk, int line, Boolean type)
+        {
+            IndentationLevel indentationLevel = new IndentationLevel();
+
+            switch (tipoTk)
+            {
+                case TipoTk.TkSe:
+                    if (type)
+                    {
+                        indentationLevel.tipoTk = TipoTk.TkSe;
+                        indentationLevel.initialLine = line;
+                        ifIndentationLevel.Add(indentationLevel);
+                    }
+                    else
+                    {
+                        updateIndentationLevel(tipoTk, line);
+                    }
+                    break;
+
+                case TipoTk.TkSenaoSe:
+                    if (type)
+                    {
+                        indentationLevel.tipoTk = TipoTk.TkSenaoSe;
+                        indentationLevel.initialLine = line;
+                        elseIfIndentationLevel.Add(indentationLevel);
+                    }
+                    else
+                    {
+                        updateIndentationLevel(tipoTk, line);
+                    }
+                    break;
+
+                case TipoTk.TkSenao:
+                    if (type)
+                    {
+                        indentationLevel.tipoTk = TipoTk.TkSenao;
+                        indentationLevel.initialLine = line;
+                        elseIndentationLevel.Add(indentationLevel);
+                    }
+                    else
+                    {
+                        updateIndentationLevel(tipoTk, line);
+                    }
+                    break;
+
+                case TipoTk.TkFor:
+                    if (type)
+                    {
+                        indentationLevel.tipoTk = TipoTk.TkFor;
+                        indentationLevel.initialLine = line;
+                        forIndentationLevel.Add(indentationLevel);
+                    }
+                    else
+                    {
+                        updateIndentationLevel(tipoTk, line);
+                    }
+                    break;
+
+                case TipoTk.TkEnquanto:
+                    if (type)
+                    {
+                        indentationLevel.tipoTk = TipoTk.TkEnquanto;
+                        indentationLevel.initialLine = line;
+                        whileIndentationLevel.Add(indentationLevel);
+                    }
+                    else
+                    {
+                        updateIndentationLevel(tipoTk, line);
+                    }
+                    break;
+            }
+        }
+
+        public void updateIndentationLevel(TipoTk tipoTk, int line)
+        {
+            switch (tipoTk)
+            {
+                case TipoTk.TkSe:
+
+                    for(int i=ifIndentationLevel.Count-1; i>0; i--)
+                    {
+                        if (ifIndentationLevel[i].finalLine == null)
+                        {
+                            ifIndentationLevel[i].finalLine = line;
+
+                            break;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkSenaoSe:
+
+                    for (int i = elseIfIndentationLevel.Count - 1; i > 0; i--)
+                    {
+                        if (elseIfIndentationLevel[i].finalLine == null)
+                        {
+                            elseIfIndentationLevel[i].finalLine = line;
+
+                            break;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkSenao:
+
+                    for (int i = elseIndentationLevel.Count - 1; i > 0; i--)
+                    {
+                        if (elseIndentationLevel[i].finalLine == null)
+                        {
+                            elseIndentationLevel[i].finalLine = line;
+
+                            break;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkFor:
+
+                    for (int i = forIndentationLevel.Count - 1; i > 0; i--)
+                    {
+                        if (forIndentationLevel[i].finalLine == null)
+                        {
+                            forIndentationLevel[i].finalLine = line;
+
+                            break;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkEnquanto:
+
+                    for (int i = whileIndentationLevel.Count - 1; i > 0; i--)
+                    {
+                        if (whileIndentationLevel[i].finalLine == null)
+                        {
+                            whileIndentationLevel[i].finalLine = line;
+
+                            break;
+                        }
+                    }
+
+                    break;
+            }
         }
 
         public int getQuantityOfOperationsWithMulPrecedence()
@@ -1396,6 +1559,8 @@ namespace Analyzer
                 lyneTypeAddEnable = true;
             }
 
+            //lyneTypeAddEnable = true;
+
             if (lyneTypeAddEnable)
             {
                 if (lyneTypeIfIdent)
@@ -1791,21 +1956,32 @@ namespace Analyzer
             {
                 verifyCompElement();
 
+                int index = -1;
+
+                if(operationsInCurrentLine[0].currentOperator == printerCompElement)
+                {
+                    index = 0;
+                }
+                else
+                {
+                    index = 1;
+                }
+
                 // There is one element in the left
-                if (((desidentElementCounter == 0) && (operationsInCurrentLine[1].currentOperator == printerCompElement)) || ((desidentElementCounter == 1) && (operationsInCurrentLine[1].currentOperator == printerCompElement)))
+                if (((desidentElementCounter == 0) && (operationsInCurrentLine[index].currentOperator == printerCompElement)) || ((desidentElementCounter == 1) && (operationsInCurrentLine[index].currentOperator == printerCompElement)))
                 {
                     // It's an identifier
-                    if (isIdentifier(operationsInCurrentLine[1].operand1))
+                    if (isIdentifier(operationsInCurrentLine[index].operand1))
                     {
                         printerLoadName = true;
 
                         if (desidentElementCounter == 0)
                         {
-                            mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+                            mountBytecode(line, operationsInCurrentLine[index].operand1, null, null, false, true);
                         }
                         else if (desidentElementCounter == 1)
                         {
-                            mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, false, true);
+                            mountBytecode(line, operationsInCurrentLine[index].operand1, null, null, false, true);
                         }
 
                         printerLoadName = false;
@@ -1815,7 +1991,7 @@ namespace Analyzer
                     {
                         printerLoadConst = true;
 
-                        mountBytecode(line, operationsInCurrentLine[1].operand1, null, null, true, true);
+                        mountBytecode(line, operationsInCurrentLine[index].operand1, null, null, true, true);
 
                         printerLoadConst = false;
                     }
@@ -3217,6 +3393,8 @@ namespace Analyzer
 
                             lyneTypeAddEnable = false;
 
+                            handleAddOfIdentationLevels(TipoTk.TkSe, currentLine, true);
+
                             break;
 
                         case TipoTk.TkSenao:
@@ -3244,6 +3422,8 @@ namespace Analyzer
 
                             lyneTypeAddEnable = false;
 
+                            handleAddOfIdentationLevels(TipoTk.TkSenao, currentLine, true);
+
                             break;
 
                         case TipoTk.TkSenaoSe:
@@ -3259,6 +3439,7 @@ namespace Analyzer
                             lyneTypeLastLineHasElseIf = true;
                             lineTypes.Add(LineType.ElseIfStatement);
                             lyneTypeAddEnable = false;
+                            handleAddOfIdentationLevels(TipoTk.TkSenaoSe, currentLine, true);
                             break;
 
                         case TipoTk.TkDesident:
@@ -3330,6 +3511,8 @@ namespace Analyzer
 
                             lyneTypeAddEnable = false;
 
+                            handleAddOfIdentationLevels(TipoTk.TkEnquanto, currentLine, true);
+
                             break;
 
                         case TipoTk.TkRange:
@@ -3337,6 +3520,7 @@ namespace Analyzer
                             lineTypeReset();
                             lyneTypeLastLineHasFor = true;
                             printerVariableToRange = lexicalTokens[i - 2].valor;
+                            handleAddOfIdentationLevels(TipoTk.TkFor, currentLine, true);
                             break;
                     }
 
