@@ -31,6 +31,8 @@ namespace Analyzer
 
         public Boolean currentIDAlreadyInSymbolsTable = false;
 
+        public Boolean handleLineExpressionInTheLeftInProgress = false;
+
         public int currentLineInFile = 0;
 
         public int currentLineInGeneratedBytecode = 0;
@@ -986,9 +988,12 @@ namespace Analyzer
                 printerPopJumpIfFalse = false;
 
                 // Pop jump if false line
-                printerCurrentIdentationLevel.bytecodeRegistersLine = currentLineInGeneratedBytecode;
+                if (printerCurrentIdentationLevel != null)
+                {
+                    printerCurrentIdentationLevel.bytecodeRegistersLine = currentLineInGeneratedBytecode;
 
-                printerIdentationRegisters.Push(printerCurrentIdentationLevel);
+                    printerIdentationRegisters.Push(printerCurrentIdentationLevel);
+                }
 
                 currentLineInGeneratedBytecode++;
             }
@@ -1199,7 +1204,14 @@ namespace Analyzer
                 switch (indentationLevel.tipoTk)
                 {
                     case TipoTk.TkSe:
-                        addSimpleJumpForward(line, false);
+                        if (printerVerifyWhileInProgress())
+                        {
+                            addSimpleJumpAbsolute(line);
+                        }
+                        else
+                        {
+                            addSimpleJumpForward(line, false);
+                        }
                         break;
 
                     case TipoTk.TkSenaoSe:
@@ -1476,6 +1488,8 @@ namespace Analyzer
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_ADD);
+
+                handleStack(OpCode.INPLACE_ADD, null);
             }
             else if (reducedSubtractionOperatorCounter > 0)
             {
@@ -1484,6 +1498,8 @@ namespace Analyzer
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_SUBTRACT);
+
+                handleStack(OpCode.INPLACE_SUBTRACT, null);
             }
             else if (reducedMultiplicationOperatorCounter > 0)
             {
@@ -1492,6 +1508,8 @@ namespace Analyzer
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_MULTIPLY);
+
+                handleStack(OpCode.INPLACE_MULTIPLY, null);
             }
             else if (reducedDivOperatorCounter > 0)
             {
@@ -1500,6 +1518,8 @@ namespace Analyzer
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_TRUE_DIVIDE);
+
+                handleStack(OpCode.INPLACE_TRUE_DIVIDE, null);
             }
         }
 
@@ -1758,6 +1778,25 @@ namespace Analyzer
             }
         }
 
+        public void addSimpleJumpAbsolute(int line)
+        {
+            // Adds JUMP_ABSOLUTE
+            BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
+
+            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+
+            bytecodeRegisterCurrentToken.lineInFile = line;
+
+            bytecodeRegisterCurrentToken.offset = currentOffset;
+
+            bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
+
+            // TODO
+            bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+        }
+
         public void addEndWhileRegisters(int currentLine)
         {
             // Adds JUMP_ABSOLUTE
@@ -1982,7 +2021,9 @@ namespace Analyzer
                     }
 
                     // Precedence 1, just analyze if all level 2 precedencse was already analized
-                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i > printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)))
+                    if (((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (quantityWithOperationWithMulPrecedence == 0) && (i > printerMoreToRightOperationIndexPrecedence1) && (!(operationsInCurrentLine[i].alreadyVerified))) || 
+                        ((operationsInCurrentLine[i].calculateNow) && (operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE)) ||
+                        ((operationsInCurrentLine[i].precedence == OperationPrecedence.TK_ADD_PRECEDENCE) && (handleLineExpressionInTheLeftInProgress) && quantityWithOperationWithMulPrecedence == 0))
                     {
                         // It's necessary to show LOAD_CONST
                         printerLoadConst = true;
@@ -2136,13 +2177,10 @@ namespace Analyzer
             {
                 verifyCompElement();
 
-                int index = -1;
+                int index = 0;
 
-                if (operationsInCurrentLine[0].currentOperator == printerCompElement)
-                {
-                    index = 0;
-                }
-                else
+                //if (operationsInCurrentLine[0].currentOperator == printerCompElement)
+                if (operationsInCurrentLine[0].currentOperator == TipoTk.TkDesident)
                 {
                     index = 1;
                 }
@@ -2178,17 +2216,21 @@ namespace Analyzer
                 }
                 else
                 {
+                    handleLineExpressionInTheLeftInProgress = true;
+
                     // Expression in the left
                     int quantityWithOperationWithMulPrecedenceIfStatement = getQuantityOfOperationsWithMulPrecedenceIfStatement(false);
                     int quantityWithOperationWithAddPrecedenceIfStatement = getQuantityOfOperationsWithAddPrecedenceIfStatement(false);
 
-                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, 1, operationRelationalPosInCurrentLine);
+                    handleArithmeticalOperations(quantityWithOperationWithMulPrecedenceIfStatement, quantityWithOperationWithAddPrecedenceIfStatement, index, operationRelationalPosInCurrentLine);
 
                     // If the operands aren't null, the bytecode element was already added
                     if (arithmeticalIdentifierOperand1 == null && arithmeticalIdentifierOperand2 == null)
                     {
                         mountBytecode(line, null, null, null, false, true);
                     }
+
+                    handleLineExpressionInTheLeftInProgress = true;
                 }
 
                 // There is one element in the right
@@ -2317,6 +2359,11 @@ namespace Analyzer
                     printerLoadName = true;
 
                     mountBytecode(currentLineInFile, operation.operand1, operation, null, false, false);
+                }
+
+                if ((!printerOperationsStack.Contains((int)getIdentifierValue(operation.operand1))) && operationsInCurrentLine.Count == 2)
+                {
+                    addSimpleLoadName((int)getIdentifierValue(operation.operand1), lineinFileGlobalToAddLoadName, operation.operand1);
                 }
 
                 arithmeticalIdentifierOperand1 = getIdentifierValue(operation.operand1);
@@ -3289,15 +3336,10 @@ namespace Analyzer
                     break;
 
                 case OpCode.INPLACE_ADD:
-                    break;
-
                 case OpCode.INPLACE_SUBTRACT:
-                    break;
-
                 case OpCode.INPLACE_MULTIPLY:
-                    break;
-
                 case OpCode.INPLACE_TRUE_DIVIDE:
+                    printerOperationsStack.Pop();
                     break;
             }
         }
@@ -3420,7 +3462,7 @@ namespace Analyzer
                     {
                         case TipoTk.TkMais:
 
-                            if (ifElementCounter > 0)
+                            if ((ifElementCounter > 0) || (whileElementCounter>0))
                             {
                                 if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
                                 {
@@ -3440,7 +3482,7 @@ namespace Analyzer
 
                         case TipoTk.TkMenos:
 
-                            if (ifElementCounter > 0)
+                            if ((ifElementCounter > 0) || (whileElementCounter > 0))
                             {
                                 if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
                                 {
@@ -3460,7 +3502,7 @@ namespace Analyzer
 
                         case TipoTk.TkMultiplicacao:
 
-                            if (ifElementCounter > 0)
+                            if ((ifElementCounter > 0) || (whileElementCounter > 0))
                             {
                                 if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
                                 {
@@ -3480,7 +3522,7 @@ namespace Analyzer
 
                         case TipoTk.TkDivisao:
 
-                            if (ifElementCounter > 0)
+                            if ((ifElementCounter > 0) || (whileElementCounter > 0))
                             {
                                 if ((equalOperatorCounter > 0) || (difOperatorCounter > 0) || (lessThanOperatorCounter > 0) || (biggerThanOperatorCounter > 0))
                                 {
