@@ -1214,7 +1214,7 @@ namespace Analyzer
 
                         addEndWhileRegisters(line);
 
-                        if (printerVerifiWhileInProgress())
+                        if (printerVerifyWhileInProgress())
                         {
                             printerWhileInProgress = true;
                         }
@@ -1226,7 +1226,17 @@ namespace Analyzer
                         break;
 
                     case TipoTk.TkFor:
-                        
+                        addForRangeFinalRegisters(line);
+
+                        if (printerVerifyForInProgress())
+                        {
+                            printerForInProgress = true;
+                        }
+                        else
+                        {
+                            printerForInProgress = false;
+                        }
+
                         break;
 
                     default:
@@ -1238,7 +1248,7 @@ namespace Analyzer
             }            
         }
 
-        public Boolean printerVerifiWhileInProgress()
+        public Boolean printerVerifyWhileInProgress()
         {
             IndentationLevel indentationLevelAux = new IndentationLevel();
 
@@ -1251,6 +1261,21 @@ namespace Analyzer
             }
 
             return false;            
+        }
+
+        public Boolean printerVerifyForInProgress()
+        {
+            IndentationLevel indentationLevelAux = new IndentationLevel();
+
+            foreach (IndentationLevel indentationLevel in nestedIndentations)
+            {
+                if (indentationLevel.tipoTk == TipoTk.TkFor)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void generateBytecode()
@@ -1406,7 +1431,10 @@ namespace Analyzer
                         printerForInProgress = true;
                     }
 
-                    verifyReduceOperationsFinalRegisters();
+                    if (operationsInCurrentLine.Count > 0)
+                    {
+                        verifyReduceOperationsFinalRegisters();
+                    }
 
                     currentLineInFile++;
 
@@ -1975,9 +2003,16 @@ namespace Analyzer
                 }
             }
 
-            if (rangeElementCouter > 0 && operationsInCurrentLine.Count == 1)
+            if (rangeElementCouter > 0 && operationsInCurrentLine.Count == 0)
             {
-
+                if (isIdentifier(printerForTopLimit))
+                {
+                    addSimpleLoadName(null, lineinFileGlobalToAddLoadName, printerForTopLimit);
+                }
+                else
+                {
+                    addSimpleLoadConst(Int16.Parse(printerForTopLimit), lineinFileGlobalToAddLoadName);
+                }
             }
 
             // Simple atrib
