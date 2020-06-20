@@ -19,5 +19,7 @@ namespace Analyzer
         public int stackPos { get; set; }
 
         public String preview { get; set; }
+
+        public int? indentationLevel = null; 
     }
 }

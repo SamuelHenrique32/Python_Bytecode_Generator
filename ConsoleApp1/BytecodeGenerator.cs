@@ -23,6 +23,8 @@ namespace Analyzer
 
         public List<LineType> lineTypes = new List<LineType>();
 
+        public List<int> lineIndentations = new List<int>();
+
         public Boolean lexicAnalyzed = false;
 
         public Boolean syntacticAnalyzed = false;
@@ -242,6 +244,8 @@ namespace Analyzer
 
         public Stack<IndentationLevel> nestedIndentations = new Stack<IndentationLevel>();
         public IndentationLevel currentNestedIndentation = new IndentationLevel();
+
+        public Boolean currentCodeHasNestedIndentations = false;
 
         //--------------------------------------------------------------------------------------
 
@@ -785,6 +789,8 @@ namespace Analyzer
                         }
                         else
                         {
+                            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
                             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                             handleStack(OpCode.LOAD_CONST, valueToAddInStack);
@@ -820,6 +826,8 @@ namespace Analyzer
                 bytecodeRegisterCurrentToken.stackPos = 0;
 
                 bytecodeRegisterCurrentToken.preview = "(" + identifier + ")";
+
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -883,6 +891,8 @@ namespace Analyzer
                     bytecodeRegisterForAttribuition.opCode = (int)OpCode.BINARY_TRUE_DIVIDE;
                 }
 
+                bytecodeRegisterForAttribuition.indentationLevel = nestedIndentations.Count;
+
                 bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
             }
 
@@ -915,6 +925,8 @@ namespace Analyzer
 
                 // Update symbols table
                 updateIdentifierValue(getVariableForAttribuition(), identifierValue);
+
+                bytecodeRegisterForAttribuition.indentationLevel = nestedIndentations.Count;
 
                 bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
 
@@ -963,6 +975,8 @@ namespace Analyzer
                     bytecodeRegisterForAttribuition.preview = "(!=)";
                 }
 
+                bytecodeRegisterForAttribuition.indentationLevel = nestedIndentations.Count;
+
                 bytecodeRegisters.Add(bytecodeRegisterForAttribuition);
 
                 printerShowCompareOp = false;
@@ -989,6 +1003,8 @@ namespace Analyzer
 
                 // TODO
                 bytecodeRegisterForJumpIfFalse.stackPos = 0;
+
+                bytecodeRegisterForJumpIfFalse.indentationLevel = nestedIndentations.Count;
 
                 bytecodeRegisters.Add(bytecodeRegisterForJumpIfFalse);
 
@@ -1060,6 +1076,8 @@ namespace Analyzer
 
             handleStack(OpCode.LOAD_CONST, value);
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
@@ -1087,6 +1105,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.stackPos = 0;
 
             bytecodeRegisterCurrentToken.preview = "(" + identifier + ")";
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -1423,6 +1443,8 @@ namespace Analyzer
 
                         addLineType();
 
+                        addLineIndentation(lineinFileGlobalToAddLoadName);
+
                         if (operationsInCurrentLine.Count > 0)
                         {
                             verifyReduceOperationsFinalRegisters();
@@ -1534,6 +1556,8 @@ namespace Analyzer
             {
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_ADD;
 
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_ADD);
@@ -1545,6 +1569,8 @@ namespace Analyzer
             else if (reducedSubtractionOperatorCounter > 0)
             {
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_SUBTRACT;
+
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -1558,6 +1584,8 @@ namespace Analyzer
             {
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_MULTIPLY;
 
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_MULTIPLY);
@@ -1569,6 +1597,8 @@ namespace Analyzer
             else if (reducedDivOperatorCounter > 0)
             {
                 bytecodeRegisterCurrentToken.opCode = (int)OpCode.INPLACE_TRUE_DIVIDE;
+
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -1631,6 +1661,8 @@ namespace Analyzer
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             // Adds POP_BLOCK
@@ -1643,6 +1675,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.lineInFile = line;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.POP_BLOCK;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -1663,6 +1697,8 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.preview = "(1 positional, 0 keyword pair)";
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             // Get iter
@@ -1675,6 +1711,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.lineInFile = line;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.GET_ITER;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -1691,6 +1729,8 @@ namespace Analyzer
 
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -1712,6 +1752,8 @@ namespace Analyzer
 
             // Update symbols table
             //updateIdentifierValue(printerVariableToRange, identifierValue);
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -1736,7 +1778,14 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.preview = "(range)";
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+        }
+
+        public void addLineIndentation(int lineinFileGlobalToAddLoadName)
+        {
+            lineIndentations.Add(nestedIndentations.Count);
         }
 
         public void addLineType()
@@ -1851,6 +1900,8 @@ namespace Analyzer
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
@@ -1870,6 +1921,8 @@ namespace Analyzer
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             // Adds POP_BLOCK
@@ -1882,6 +1935,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.lineInFile = currentLine;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.POP_BLOCK;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -1901,6 +1956,8 @@ namespace Analyzer
 
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -1981,6 +2038,8 @@ namespace Analyzer
                 }
             }
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
@@ -2008,6 +2067,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.stackPos = 0;
 
             //bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -2867,6 +2928,11 @@ namespace Analyzer
 
             handleForIter();
 
+            if (currentCodeHasNestedIndentations)
+            {
+                printerHandleStackAndPreviewForNestedCodes();
+            }
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -2955,6 +3021,13 @@ namespace Analyzer
             }
         }
 
+        public void printerHandleStackAndPreviewForNestedCodes()
+        {
+            popJumpIfFalseNestedOperations();
+
+            handleSetupLoopNestedOperations();
+        }
+
         public void handleForIter()
         {
             Boolean next = false;
@@ -3037,6 +3110,65 @@ namespace Analyzer
             }
         }
 
+        public void popJumpIfFalseNestedOperations()
+        {
+            Boolean next = false;
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
+                {
+                    int lineToGetOffset = getValidLineToPopJumpIfFalseNestedOperations(bytecodeRegisters[i].lineInFile);
+
+                    if (lineToGetOffset == -1)
+                    {
+                        for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                        {
+                            if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                            {
+                                bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                                next = true;
+
+                                break;
+                            }
+                        }
+
+                        if (next)
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (lineToGetOffset == -2)
+                    {
+                        bytecodeRegisters[i].stackPos = bytecodeRegisters[bytecodeRegisters.Count - 2].offset;
+
+                        continue;
+                    }
+
+                    for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].lineInFile == lineToGetOffset)
+                        {
+                            bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
         public int getValidLineToPopJumpIfFalse(int line)
         {
             int value = 0;
@@ -3062,6 +3194,31 @@ namespace Analyzer
             return value;
         }
 
+        public int getValidLineToPopJumpIfFalseNestedOperations(int line)
+        {
+            int value = 0;
+
+            if (lineTypes[line] == LineType.IfStatement)
+            {
+                value = (getValidLineToPopJumpIfFalseIfStatementNestedOperations(line));
+            }
+            else if (lineTypes[line] == LineType.ElseIfStatement)
+            {
+                value = (getValidLineToPopJumpIfFalseElseIfStatementNestedOperations(line));
+            }
+            else if (lineTypes[line] == LineType.WhileStatement)
+            {
+                value = -1;
+            }
+
+            if ((value != -1) && (value != -2) && (lineTypes[value] == LineType.ElseStatement) && (lineTypes[value - 2] != LineType.ElseStatement))
+            {
+                value++;
+            }
+
+            return value;
+        }
+
         public int getValidLineToPopJumpIfFalseIfStatement(int line)
         {
             for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
@@ -3075,11 +3232,37 @@ namespace Analyzer
             return -1;
         }
 
+        public int getValidLineToPopJumpIfFalseIfStatementNestedOperations(int line)
+        {
+            for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
+            {
+                if ((lineTypes[i] != LineType.IfStatement) && (lineIndentations[line] == lineIndentations[i]))
+                {
+                    return i + 1;
+                }
+            }
+
+            return -2;
+        }
+
         public int getValidLineToPopJumpIfFalseElseIfStatement(int line)
         {
             for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
             {
                 if (lineTypes[i] != LineType.ElseIfStatement)
+                {
+                    return i + 1;
+                }
+            }
+
+            return -1;
+        }
+
+        public int getValidLineToPopJumpIfFalseElseIfStatementNestedOperations(int line)
+        {
+            for (int i = line; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
+            {
+                if ((lineTypes[i] != LineType.ElseIfStatement) && (lineIndentations[line] == lineIndentations[i]))
                 {
                     return i + 1;
                 }
@@ -3157,6 +3340,43 @@ namespace Analyzer
             }
         }
 
+        public void handleSetupLoopNestedOperations()
+        {
+            Boolean next = false;
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                {
+                    for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                        {
+                            j++;
+
+                            if (bytecodeRegisters[j].opCode == (int)OpCode.JUMP_FORWARD)
+                            {
+                                j++;
+                            }
+
+                            bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
         public void handleJumpForward()
         {
             Boolean next = false;
@@ -3168,6 +3388,13 @@ namespace Analyzer
                 if (bytecodeRegisters[i].opCode == (int)OpCode.JUMP_FORWARD)
                 {
                     int lineToGetOffset = getValidLineToJumpForward(bytecodeRegisters[i].lineInFile);
+
+                    if(lineToGetOffset == -1)
+                    {
+                        bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[bytecodeRegisters.Count-2].offset + ")";
+
+                        continue;
+                    }
 
                     for (int j = i; j < bytecodeRegisters.Count - 1; j++)
                     {
@@ -3303,6 +3530,8 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.preview = "(None)";
 
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             // Adds RETURN_VALUE
@@ -3315,6 +3544,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.lineInFile = bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.RETURN_VALUE;
+
+            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -3866,6 +4097,11 @@ namespace Analyzer
             if (foundACommand && (desidentElementCounter>0))
             {
                 nestedIndentations.Pop();
+            }
+
+            if (nestedIndentations.Count > 1)
+            {
+                currentCodeHasNestedIndentations = true;
             }
         }
 
