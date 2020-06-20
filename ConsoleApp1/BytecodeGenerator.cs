@@ -1204,7 +1204,7 @@ namespace Analyzer
                 switch (indentationLevel.tipoTk)
                 {
                     case TipoTk.TkSe:
-                        if (printerVerifyWhileInProgress())
+                        if (printerVerifyWhileInProgress() || printerVerifyForInProgress())
                         {
                             addSimpleJumpAbsolute(line);
                         }
