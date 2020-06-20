@@ -668,13 +668,20 @@ namespace Analyzer
                     {
                         printerSimpleAtrib = false;
 
-                        bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[searchForSimpleAtribIndex()].operand2.ToString() + ")";
+                        if (printerVerifyIfSecondOperandIsAnIdentifier(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2.ToString()))
+                        {
+                            mustAddLoadConst = false;
+                        }
+                        else
+                        {
+                            bytecodeRegisterCurrentToken.preview = "(" + operationsInCurrentLine[searchForSimpleAtribIndex()].operand2.ToString() + ")";
 
-                        valueToAddInStack = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
+                            valueToAddInStack = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
 
-                        identifierValue = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
+                            identifierValue = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
 
-                        //handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
+                            //handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
+                        }
                     }
                     else if (printerShowOperationType)
                     {
@@ -1003,6 +1010,18 @@ namespace Analyzer
             printerFoundAnIdentifier = false;
 
             printerShowOperationType = false;
+        }
+
+        public Boolean printerVerifyIfSecondOperandIsAnIdentifier(String identifier)
+        {
+            if (isIdentifier(identifier))
+            {
+                addSimpleLoadName(null, lineinFileGlobalToAddLoadName, identifier);
+
+                return true;
+            }
+
+            return false;
         }
 
         public int searchForSimpleAtribIndex()
@@ -1378,7 +1397,7 @@ namespace Analyzer
                             //printerWhileInProgress = true;
                         }
 
-                        if (printerForInProgress && (desidentElementCounter > 0) && printerAnyReducedOperationInCurrentLine())
+                        if (printerForInProgress && (desidentElementCounter > 0) && printerAnyReducedOperationInCurrentLine() && (currentNestedIndentation.tipoTk != TipoTk.TkEnquanto))
                         {
                             printerForInProgress = false;
 
@@ -1404,6 +1423,11 @@ namespace Analyzer
 
                         addLineType();
 
+                        if (operationsInCurrentLine.Count > 0)
+                        {
+                            verifyReduceOperationsFinalRegisters();
+                        }
+
                         if ((desidentElementCounter > 0) && printerThereIsAnyNestedOperation())
                         {
                             handleDesidentOfNestedOperations(i);
@@ -1421,7 +1445,7 @@ namespace Analyzer
                             addEndWhileRegisters(i);
                         }
 
-                        if (printerForInProgress && (desidentElementCounter > 0))
+                        if (printerForInProgress && (desidentElementCounter > 0) && (!printerVerifyWhileInNextLine(lineinFileGlobalToAddLoadName)))
                         {
                             printerForInProgress = false;
 
@@ -1466,6 +1490,21 @@ namespace Analyzer
 
             printGeneratedBytecode();
         }
+
+        public Boolean printerVerifyWhileInNextLine(int lineinFileGlobalToAddLoadName)
+        {
+            for(int i=0; i< lexicalTokens.Count; i++)
+            {
+                if (lexicalTokens[i].linha == (lineinFileGlobalToAddLoadName+1) &&
+                    lexicalTokens[i].tipo == TipoTk.TkEnquanto)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public Boolean printerAnyReducedOperationInCurrentLine()
         {
             if (reducedAddOperatorCounter > 0 || reducedSubtractionOperatorCounter > 0 || reducedMultiplicationOperatorCounter > 0 || reducedDivOperatorCounter > 0)
@@ -1869,17 +1908,20 @@ namespace Analyzer
         // Handle desident for IF
         public void handleDesident(int currentLineInFile)
         {
-            IdentDesidentLevel identationLevel = printerIdentationRegisters.Peek();
-
-            // If it's an if desident
-            //if (identationLevel.tokenType == TipoTk.TkSe && elseIfElementCounter == 0)
-            if (identationLevel.tokenType == TipoTk.TkSe)
+            if (printerIdentationRegisters.Count>0)
             {
-                printerCurrentIfIdentationLevel--;
+                IdentDesidentLevel identationLevel = printerIdentationRegisters.Peek();
 
-                addSimpleJumpForward(currentLineInFile, true);
+                // If it's an if desident
+                //if (identationLevel.tokenType == TipoTk.TkSe && elseIfElementCounter == 0)
+                if (identationLevel.tokenType == TipoTk.TkSe)
+                {
+                    printerCurrentIfIdentationLevel--;
 
-                printerIdentationRegisters.Pop();
+                    addSimpleJumpForward(currentLineInFile, true);
+
+                    printerIdentationRegisters.Pop();
+                }
             }
         }
 
