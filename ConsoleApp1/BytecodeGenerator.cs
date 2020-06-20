@@ -1383,6 +1383,11 @@ namespace Analyzer
                             printerForInProgress = false;
 
                             addForRangeFinalRegisters(i - 1);
+
+                            if (printerThereIsAnyNestedOperation())
+                            {
+                                nestedIndentations.Pop();
+                            }
                         }
 
                         verifyLoadForReducedOperations(i);
@@ -1402,6 +1407,11 @@ namespace Analyzer
                         if ((desidentElementCounter > 0) && printerThereIsAnyNestedOperation())
                         {
                             handleDesidentOfNestedOperations(i);
+                        }
+
+                        if (operationsInCurrentLine.Count > 0)
+                        {
+                            verifyReduceOperationsFinalRegisters();
                         }
 
                         if (printerWhileInProgress && (desidentElementCounter > 0) && (!printerThereIsAnyNestedOperation()))
@@ -1490,6 +1500,8 @@ namespace Analyzer
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_ADD);
 
                 handleStack(OpCode.INPLACE_ADD, null);
+
+                reducedAddOperatorCounter = 0;
             }
             else if (reducedSubtractionOperatorCounter > 0)
             {
@@ -1500,6 +1512,8 @@ namespace Analyzer
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_SUBTRACT);
 
                 handleStack(OpCode.INPLACE_SUBTRACT, null);
+
+                reducedSubtractionOperatorCounter = 0;
             }
             else if (reducedMultiplicationOperatorCounter > 0)
             {
@@ -1510,6 +1524,8 @@ namespace Analyzer
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_MULTIPLY);
 
                 handleStack(OpCode.INPLACE_MULTIPLY, null);
+
+                reducedMultiplicationOperatorCounter = 0;
             }
             else if (reducedDivOperatorCounter > 0)
             {
@@ -1520,6 +1536,8 @@ namespace Analyzer
                 addSimpleStoreNameForReducedOperations(operationsInCurrentLine[operand1Index].operand1, null, OpCode.INPLACE_TRUE_DIVIDE);
 
                 handleStack(OpCode.INPLACE_TRUE_DIVIDE, null);
+
+                reducedDivOperatorCounter = 0;
             }
         }
 
