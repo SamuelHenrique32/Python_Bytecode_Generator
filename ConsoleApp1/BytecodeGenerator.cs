@@ -1412,7 +1412,7 @@ namespace Analyzer
                     {
                         if (whileElementCounter > 0)
                         {
-                            addSetupLoop(i);
+                            addSetupLoop(i, false);
 
                             //printerWhileInProgress = true;
                         }
@@ -1760,7 +1760,7 @@ namespace Analyzer
 
         public void addForRangeInitialRegisters(int currentLine)
         {
-            addSetupLoop(currentLine);
+            addSetupLoop(currentLine, true);
 
             // Adds LOAD_GLOBAL
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
@@ -1938,10 +1938,12 @@ namespace Analyzer
 
             bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
+            bytecodeRegisterCurrentToken.TipoTk = TipoTk.TkEnquanto;
+
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
-        public void addSetupLoop(int currentLineInFile)
+        public void addSetupLoop(int currentLineInFile, Boolean type)
         {
             // Adds SETUP_LOOP
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
@@ -1953,6 +1955,15 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.offset = currentOffset;
 
             bytecodeRegisterCurrentToken.opCode = (int)OpCode.SETUP_LOOP;
+
+            if (!type)
+            {
+                bytecodeRegisterCurrentToken.TipoTk = TipoTk.TkEnquanto;
+            }
+            else
+            {
+                bytecodeRegisterCurrentToken.TipoTk = TipoTk.TkFor;
+            }
 
             // TODO
             bytecodeRegisterCurrentToken.stackPos = 0;
@@ -3026,6 +3037,8 @@ namespace Analyzer
             popJumpIfFalseNestedOperations();
 
             handleSetupLoopNestedOperations();
+
+            handleJumpAbsoluteNestedOperations();
         }
 
         public void handleForIter()
@@ -3120,13 +3133,35 @@ namespace Analyzer
 
                 if (bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
                 {
-                    int lineToGetOffset = getValidLineToPopJumpIfFalseNestedOperations(bytecodeRegisters[i].lineInFile);
+                    if ((whileIndentationLevel.Count>0) && (lineTypes[bytecodeRegisters[i].lineInFile-1] != LineType.WhileStatement))
+                    {
+                        for(int j=i; j>=0; j--)
+                        {
+                            if (bytecodeRegisters[j].opCode == (int)OpCode.SETUP_LOOP)
+                            {
+                                j++;
+
+                                bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                                next = true;
+
+                                break;
+                            }
+                        }
+
+                        if (next)
+                        {
+                            continue;
+                        }
+                    }
+
+                    int lineToGetOffset = getValidLineToPopJumpIfFalseNestedOperations(bytecodeRegisters[i].lineInFile-1);
 
                     if (lineToGetOffset == -1)
                     {
                         for (int j = i; j < bytecodeRegisters.Count - 1; j++)
                         {
-                            if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                            if ((bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK) && (bytecodeRegisters[j].TipoTk != null) && (bytecodeRegisters[j].TipoTk == TipoTk.TkEnquanto))
                             {
                                 bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
 
@@ -3288,10 +3323,48 @@ namespace Analyzer
                             if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
                             {
                                 bytecodeRegisters[j].stackPos = bytecodeRegisters[i + 1].offset;
+
+                                if (bytecodeRegisters[j+1].opCode == (int)OpCode.JUMP_ABSOLUTE)
+                                {
+                                    bytecodeRegisters[j+1].stackPos = bytecodeRegisters[i + 1].offset;
+                                }
                             }
                             else
                             {
                                 bytecodeRegisters[j].stackPos = bytecodeRegisters[i].offset;
+                            }
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        public void handleJumpAbsoluteNestedOperations()
+        {
+            Boolean next = false;
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                next = false;
+
+                if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                {
+                    for (int j = i + 1; j < bytecodeRegisters.Count - 1; j++)
+                    {
+                        if (bytecodeRegisters[j].opCode == (int)OpCode.JUMP_ABSOLUTE && bytecodeRegisters[j].stackPos==0)
+                        {
+                            if ((bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP) && (bytecodeRegisters[i].indentationLevel == bytecodeRegisters[j].indentationLevel))
+                            {
+                                bytecodeRegisters[j].stackPos = bytecodeRegisters[i + 1].offset;
                             }
 
                             next = true;
@@ -3348,11 +3421,12 @@ namespace Analyzer
             {
                 next = false;
 
-                if (bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP)
+                if ((bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP) && (bytecodeRegisters[i].TipoTk == TipoTk.TkEnquanto))
                 {
                     for (int j = i; j < bytecodeRegisters.Count - 1; j++)
                     {
-                        if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+
+                        if ((bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK) && (bytecodeRegisters[j].TipoTk == TipoTk.TkEnquanto))
                         {
                             j++;
 
@@ -3372,6 +3446,36 @@ namespace Analyzer
                     if (next)
                     {
                         continue;
+                    }
+                }
+                else
+                {
+                    if ((bytecodeRegisters[i].opCode == (int)OpCode.SETUP_LOOP) && (bytecodeRegisters[i].TipoTk == TipoTk.TkFor))
+                    {
+                        for (int j = i; j < bytecodeRegisters.Count - 1; j++)
+                        {
+
+                            if ((bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK) && (bytecodeRegisters[j].TipoTk == null))
+                            {
+                                j++;
+
+                                if (bytecodeRegisters[j].opCode == (int)OpCode.JUMP_FORWARD)
+                                {
+                                    j++;
+                                }
+
+                                bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
+
+                                next = true;
+
+                                break;
+                            }
+                        }
+
+                        if (next)
+                        {
+                            continue;
+                        }
                     }
                 }
             }

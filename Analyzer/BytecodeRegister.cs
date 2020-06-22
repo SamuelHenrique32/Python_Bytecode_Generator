@@ -20,6 +20,8 @@ namespace Analyzer
 
         public String preview { get; set; }
 
-        public int? indentationLevel = null; 
+        public int? indentationLevel = null;
+
+        public TipoTk? TipoTk = null;
     }
 }
