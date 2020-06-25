@@ -1230,6 +1230,76 @@ namespace Analyzer
             return false;
         }
 
+        public void addFinalLineOfIndentationLevel(IndentationLevel indentationLevel)
+        {
+            switch (indentationLevel.tipoTk)
+            {
+                case TipoTk.TkSe:
+
+                    foreach(IndentationLevel idLvl in ifIndentationLevel)
+                    {
+                        if(idLvl.initialLine == indentationLevel.initialLine)
+                        {
+                            idLvl.finalLine = lineinFileGlobalToAddLoadName;
+                        }
+                    }
+                    
+                    break;
+
+                case TipoTk.TkSenaoSe:
+
+                    foreach (IndentationLevel idLvl in elseIfIndentationLevel)
+                    {
+                        if (idLvl.initialLine == indentationLevel.initialLine)
+                        {
+                            idLvl.finalLine = lineinFileGlobalToAddLoadName;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkSenao:
+
+                    foreach (IndentationLevel idLvl in elseIndentationLevel)
+                    {
+                        if (idLvl.initialLine == indentationLevel.initialLine)
+                        {
+                            idLvl.finalLine = lineinFileGlobalToAddLoadName;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkEnquanto:
+
+                    foreach (IndentationLevel idLvl in whileIndentationLevel)
+                    {
+                        if (idLvl.initialLine == indentationLevel.initialLine)
+                        {
+                            idLvl.finalLine = lineinFileGlobalToAddLoadName;
+                        }
+                    }
+
+                    break;
+
+                case TipoTk.TkFor:
+
+                    foreach (IndentationLevel idLvl in forIndentationLevel)
+                    {
+                        if (idLvl.initialLine == indentationLevel.initialLine)
+                        {
+                            idLvl.finalLine = lineinFileGlobalToAddLoadName;
+                        }
+                    }
+
+                    break;
+
+                default:
+
+                    break;
+            }
+        }
+
         public void handleDesidentOfNestedOperations(int line)
         {
             int auxDesidentElementCounter = desidentElementCounter;
@@ -1239,6 +1309,8 @@ namespace Analyzer
                 IndentationLevel indentationLevel = new IndentationLevel();
 
                 indentationLevel = nestedIndentations.Pop();
+
+                addFinalLineOfIndentationLevel(indentationLevel);
 
                 switch (indentationLevel.tipoTk)
                 {
@@ -1425,7 +1497,10 @@ namespace Analyzer
 
                             if (printerThereIsAnyNestedOperation())
                             {
-                                nestedIndentations.Pop();
+                                IndentationLevel indentationLevel = nestedIndentations.Pop();
+
+                                // Add final line off the operation
+                                addFinalLineOfIndentationLevel(indentationLevel);
                             }
                         }
 
@@ -3123,6 +3198,30 @@ namespace Analyzer
             }
         }
 
+        public Boolean popJumpIfFalseNestedOperationsHandleExternalFor(BytecodeRegister bytecodeRegister, int index)
+        {
+            if(forIndentationLevel != null)
+            {
+                foreach (IndentationLevel indentationLevel in forIndentationLevel)
+                {
+                    if ((bytecodeRegister.lineInFile >= indentationLevel.initialLine) && (bytecodeRegister.lineInFile <= indentationLevel.finalLine))
+                    {
+                        for(int i=index; i>=0; i--)
+                        {
+                            if ((bytecodeRegisters[i].lineInFile == indentationLevel.initialLine) && (bytecodeRegisters[i].opCode == (int)OpCode.FOR_ITER))
+                            {
+                                bytecodeRegisters[index].stackPos = bytecodeRegisters[i].offset;
+
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
         public void popJumpIfFalseNestedOperations()
         {
             Boolean next = false;
@@ -3133,6 +3232,11 @@ namespace Analyzer
 
                 if (bytecodeRegisters[i].opCode == (int)OpCode.POP_JUMP_IF_FALSE)
                 {
+                    if(popJumpIfFalseNestedOperationsHandleExternalFor(bytecodeRegisters[i], i))
+                    {
+                        continue;
+                    }
+
                     if ((whileIndentationLevel.Count>0) && (lineTypes[bytecodeRegisters[i].lineInFile-1] != LineType.WhileStatement))
                     {
                         for(int j=i; j>=0; j--)
@@ -3377,6 +3481,14 @@ namespace Analyzer
                     {
                         continue;
                     }
+                }
+            }
+
+            for (int i = 0; i < bytecodeRegisters.Count - 1; i++)
+            {
+                if((bytecodeRegisters[i].opCode == (int)OpCode.JUMP_ABSOLUTE) && (bytecodeRegisters[i+1].opCode == (int)OpCode.JUMP_ABSOLUTE))
+                {
+                    bytecodeRegisters[i + 1].stackPos = bytecodeRegisters[i].stackPos;
                 }
             }
         }
