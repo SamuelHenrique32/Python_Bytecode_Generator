@@ -34,7 +34,7 @@ namespace Analyzer
         TkCharConst,
         TkNumconst,
         TkPercent,
-        TkMultiplicacao,
+        TkMultiplicaco,
         TkDivisao,
         TkPontoEVirgula,
         TkPonto,
