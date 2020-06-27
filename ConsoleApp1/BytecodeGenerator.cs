@@ -1006,6 +1006,11 @@ namespace Analyzer
 
                 bytecodeRegisterForJumpIfFalse.indentationLevel = nestedIndentations.Count;
 
+                if (whileElementCounter > 0)
+                {
+                    bytecodeRegisterForJumpIfFalse.TipoTk = TipoTk.TkEnquanto;
+                }
+
                 bytecodeRegisters.Add(bytecodeRegisterForJumpIfFalse);
 
                 printerPopJumpIfFalse = false;
@@ -1737,6 +1742,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.stackPos = 0;
 
             bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
+            bytecodeRegisterCurrentToken.TipoTk = TipoTk.TkFor;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
@@ -3128,7 +3135,7 @@ namespace Analyzer
                 {
                     for (int j = i; j < bytecodeRegisters.Count; j++)
                     {
-                        if (bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK)
+                        if ((bytecodeRegisters[j].opCode == (int)OpCode.POP_BLOCK) && (bytecodeRegisters[j].TipoTk!=TipoTk.TkEnquanto))
                         {
                             bytecodeRegisters[i].preview = "(to " + bytecodeRegisters[j].offset + ")";
 
@@ -3200,7 +3207,7 @@ namespace Analyzer
 
         public Boolean popJumpIfFalseNestedOperationsHandleExternalFor(BytecodeRegister bytecodeRegister, int index)
         {
-            if(forIndentationLevel != null)
+            if((forIndentationLevel != null) && (bytecodeRegisters[index].TipoTk!=TipoTk.TkEnquanto))
             {
                 foreach (IndentationLevel indentationLevel in forIndentationLevel)
                 {
@@ -3489,6 +3496,31 @@ namespace Analyzer
                 if((bytecodeRegisters[i].opCode == (int)OpCode.JUMP_ABSOLUTE) && (bytecodeRegisters[i+1].opCode == (int)OpCode.JUMP_ABSOLUTE))
                 {
                     bytecodeRegisters[i + 1].stackPos = bytecodeRegisters[i].stackPos;
+                }
+            }
+
+            for(int i=bytecodeRegisters.Count-1; i>=0; i--)
+            {
+                next = false;
+
+                if ((bytecodeRegisters[i].opCode == (int)OpCode.JUMP_ABSOLUTE) && (bytecodeRegisters[i].TipoTk == TipoTk.TkFor) && (bytecodeRegisters[i].stackPos == 0))
+                {
+                    for(int j=i; j>=0; j--)
+                    {
+                        if (bytecodeRegisters[j].opCode == (int)OpCode.FOR_ITER)
+                        {
+                            bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                            next = true;
+
+                            break;
+                        }
+                    }
+
+                    if (next)
+                    {
+                        continue;
+                    }
                 }
             }
         }
