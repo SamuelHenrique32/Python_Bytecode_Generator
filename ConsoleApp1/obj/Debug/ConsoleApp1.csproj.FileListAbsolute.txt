@@ -28,3 +28,13 @@ C:\Users\Samuel Henrique\Downloads\Python_Bytecode_Generator\ConsoleApp1\obj\Deb
 C:\Users\Samuel Henrique\Downloads\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.csproj.CopyComplete
 C:\Users\Samuel Henrique\Downloads\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.exe
 C:\Users\Samuel Henrique\Downloads\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.pdb
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.csprojAssemblyReference.cache
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.csproj.CoreCompileInputs.cache
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.exe
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.pdb
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\bin\Debug\ConsoleApp1.exe.config
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\bin\Debug\ConsoleApp1.exe
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\bin\Debug\ConsoleApp1.pdb
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\bin\Debug\Analyzer.dll
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\bin\Debug\Analyzer.pdb
+C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\ConsoleApp1\obj\Debug\ConsoleApp1.csproj.CopyComplete
