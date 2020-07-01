@@ -1255,8 +1255,10 @@ namespace Analyzer
                 if (tk.tipo == TipoTk.TkAbreParenteses)
                 {// (
                     tk = lex.getToken();
+                    lex.marcaPosToken(tk);
                     if (START() == 1)
                     {
+                        lex.Peek();
                         if (OPEXPP4() == 1)
                         {
                             if (STEP() == 1)
@@ -1272,7 +1274,25 @@ namespace Analyzer
                         }
                         else { return 0; }
                     }
-                    else { return 0; }
+                    else
+                    {
+                        tk = lex.restauraPosToken();
+                        if (OPEXPP4() == 1)
+                        {
+                            if (STEP() == 1)
+                            {
+                                if (tk.tipo == TipoTk.TkFechaParenteses)
+                                {// )
+                                    tk = lex.getToken();
+                                    return 1;
+                                }
+                                else { setError(); return 0; }
+                            }
+                            else { return 0; }
+                        }
+                        else { return 0; }
+                    }
+
                 }
                 else { setError(); return 0; }
             }

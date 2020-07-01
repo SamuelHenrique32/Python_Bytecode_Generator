@@ -20,6 +20,8 @@ namespace Analyzer
 
         private bool isTab = true;
 
+        private bool isA = false;
+
         private Stack<int> pos = new Stack<int>();
 
         private List<int> tabs = new List<int>();
@@ -48,7 +50,11 @@ namespace Analyzer
 
         public List<Token> tks = new List<Token>();
 
-        private string[] db = { "-", "+", "=", ">", "<", "&", "|", "@", "%", "//", "**" };
+        private string[] tb = { "*", "/", ">", "<" };
+
+        private string[] db = { "-", "+", "=", ">", "<", "&", "|", "@", "%", "/", "*" };
+
+        private string[] atrib = { "^", "|", "&", "%", "-", "<", ">", "!", "+", "*", "/" };
 
         private string[] str = { "'", "\"" };
         private void Reset()
@@ -60,6 +66,7 @@ namespace Analyzer
             isDB = false;
             isString = false;
             isTab = true;
+            isA = false;
             tabCount = 0;
         }
 
@@ -71,6 +78,7 @@ namespace Analyzer
             isDB = false;
             isString = false;
             isTab = true;
+            isA = false;
             linha = linha + 1;
             tabCount = 0;
         }
@@ -103,6 +111,16 @@ namespace Analyzer
         private bool isDuble(string c)
         {
             return db.Contains(c);
+        }
+
+        private bool isAtrib(string c)
+        {
+            return atrib.Contains(c);
+        }
+
+        private bool isTb(string c)
+        {
+            return tb.Contains(c);
         }
 
         private bool constString(string c)
@@ -280,7 +298,7 @@ namespace Analyzer
         {
 
             Reset();
-            Token tk = new Token(); 
+            Token tk = new Token();
 
             while ((proximo <= codigo.Length && atual < codigo.Length) && !isFinal)
             {
@@ -288,15 +306,15 @@ namespace Analyzer
                 tks.Add(tk);
             }
 
-            
-          
+
+
             tabs.Add(tabCount);
         }
 
         public void generateIdentation()
         {
             var last = tabs.Last();
-            for (int i = last ; i > 0; i--)
+            for (int i = last; i > 0; i--)
             {
                 Console.WriteLine("DESIDENT");
             }
@@ -304,7 +322,7 @@ namespace Analyzer
 
         public Token VerificarIdentacao()
         {
-            if (tabs.Count > 0 && tabCount > tabs.Last() )
+            if (tabs.Count > 0 && tabCount > tabs.Last())
             {
                 tabs.Add(tabCount);
                 return identToken();
@@ -339,7 +357,7 @@ namespace Analyzer
             Token t = new Token();
             //tk.Clear();
 
-            while ( atual < codigo.Length && !isFinal)
+            while (atual < codigo.Length && !isFinal)
             {
 
                 satual = codigo[atual];
@@ -361,14 +379,16 @@ namespace Analyzer
                     tabCount++;
                     Next();
                 }
+
                 else if (constString(satual.ToString()))
                 {
                     if (isTab)
                     {
                         var tkn = VerificarIdentacao();
                         isTab = false;
-                       
-                        if (tkn.tipo != TipoTk.Default) {
+
+                        if (tkn.tipo != TipoTk.Default)
+                        {
                             isFinal = false;
                             return tkn;
                         }
@@ -398,7 +418,7 @@ namespace Analyzer
                     {
                         var tkn = VerificarIdentacao();
                         isTab = false;
-                       
+
                         if (tkn.tipo != TipoTk.Default)
                         {
                             isFinal = false;
@@ -416,7 +436,7 @@ namespace Analyzer
                     {
                         var tkn = VerificarIdentacao();
                         isTab = false;
-                       
+
                         if (tkn.tipo != TipoTk.Default)
                         {
                             isFinal = false;
@@ -425,6 +445,7 @@ namespace Analyzer
                     }
                     if (!tkIsNull() && isDB)
                     {
+                        isFinal = false;
                         return tkToToken(coluna);
                     }
                     tk.Add(satual);
@@ -445,14 +466,34 @@ namespace Analyzer
                         Next();
                     }
                 }
+                else if (!isDB && isAtrib(satual.ToString()) && atual + 1 < codigo.Length && codigo[atual + 1].ToString() == "=")
+                {
+                    if (!tkIsNull())
+                    {
+                        return tkToToken(coluna);
+                    }
 
+                    tk.Add(satual);
+                    tk.Add(codigo[atual + 1]);
+                    Next();
+                    Next();
+                    return tkToToken(coluna);
+                }
+                else if (isDB && isTb(satual.ToString()) && atual + 1 < codigo.Length && codigo[atual + 1].ToString() == "=")
+                {
+                    tk.Add(satual);
+                    tk.Add(codigo[atual + 1]);
+                    Next();
+                    Next();
+                    return tkToToken(coluna);
+                }
                 else if (isSeparator(satual))
                 {
                     if (isTab)
                     {
                         var tkn = VerificarIdentacao();
                         isTab = false;
-                       
+
                         if (tkn.tipo != TipoTk.Default)
                         {
                             isFinal = false;
@@ -478,6 +519,12 @@ namespace Analyzer
                 }
                 else if (isDuble(satual.ToString()))
                 {
+                    if (!tk.Contains(satual) && !tkIsNull())
+                    {
+
+                        isFinal = false;
+                        return tkToToken(coluna);
+                    }
                     if (isTab)
                     {
                         var tkn = VerificarIdentacao();
@@ -513,7 +560,7 @@ namespace Analyzer
                     {
                         var tkn = VerificarIdentacao();
                         isTab = false;
-                       
+
                         if (tkn.tipo != TipoTk.Default)
                         {
                             isFinal = false;
@@ -543,6 +590,7 @@ namespace Analyzer
                 if (atual == codigo.Length - 1)
                 {
                     isFinal = true;
+                    Next();
                 }
                 tabs.Add(tabs.Last() - 1);
                 return desidentToken();
@@ -553,7 +601,7 @@ namespace Analyzer
                 return tkToToken(coluna);
             }
 
-            
+
 
             tk.Clear();
             return new Token { tipo = TipoTk.End };
@@ -573,7 +621,7 @@ namespace Analyzer
             proximo = atual + 1;
             return last.Pop();
         }
-        
+
         public void Peek()
         {
             pos.Pop();
@@ -581,8 +629,6 @@ namespace Analyzer
         }
         public void PrintTokens()
         {
-            Console.WriteLine("Tokens Reconhecidos: ");
-
             using (StreamWriter file = new StreamWriter("Tokens.lex"))
             {
                 foreach (var t in tks)
@@ -650,4 +696,3 @@ namespace Analyzer
     }
 
 }
-
