@@ -16,7 +16,6 @@ namespace Analyzer
         public List<Token> lexicalTokens = new List<Token>();
 
         // Stores the variables
-        //public HashSet<Symbol> symbolsTable = new HashSet<Symbol>(); 
         public List<Symbol> symbolsTable = new List<Symbol>();
 
         public List<BytecodeRegister> bytecodeRegisters = new List<BytecodeRegister>();
