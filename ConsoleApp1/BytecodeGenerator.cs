@@ -730,11 +730,8 @@ namespace Analyzer
 
                             valueToAddInStack = valueToVerifyInStack;
 
-                            //identifierValue = Int16.Parse(operation.operand2);
                             identifierValue = valueToVerifyInStack;
 
-                            //handleStack(OpCode.LOAD_CONST, Int16.Parse(operation.operand2));
-                            //handleStack(OpCode.LOAD_CONST, identifierValue);
                         }
                         // Load result
                         else

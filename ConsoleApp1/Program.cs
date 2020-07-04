@@ -78,7 +78,7 @@ namespace ConsoleApp1
                 Console.WriteLine("\nErro de sintaxe foi identificado, bytecode não gerado");
             }
 
-            Console.WriteLine("\nPressione tecla");
+            Console.WriteLine("\n\nPressione tecla");
             Console.ReadLine();
             Console.Clear();
             Init(bytecodeGenerator);
