@@ -1,6 +1,0 @@
-O programa analyzer lê um arquivo e reconhece os tokens do mesmo.
-Como usar:
-1º Abra a pasta v1/Excutavel
-2º Execute o arquivo .exe
-3º Coloque o caminho do arquivo. Se o arquivo estiver na pasta v1 só é necessário colocar o nome. Se estiver em outro diretório é necessário colocar o caminho trocando / por \\.
-4º O programa irá printar os tokens e grava - los na pasta v1 com o nome tokens.lex
