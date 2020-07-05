@@ -788,14 +788,19 @@ namespace Analyzer
                         }
                         else
                         {
-                            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+                            if ((ifElementCounter > 0) && printerLoadName)
+                            {
+                                // For now, do nothing
+                            }
+                            else
+                            {
+                                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
-                            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+                                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
-                            handleStack(OpCode.LOAD_CONST, valueToAddInStack);
+                                handleStack(OpCode.LOAD_CONST, valueToAddInStack);
+                            }                            
                         }
-
-                        //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
                     }
                 }
             }
@@ -1319,7 +1324,7 @@ namespace Analyzer
                 switch (indentationLevel.tipoTk)
                 {
                     case TipoTk.TkSe:
-                        if (printerVerifyWhileInProgress() || printerVerifyForInProgress())
+                        if (printerVerifyWhileInProgress() || printerVerifyForInProgress() || printerVerifyIfInProgress())
                         {
                             addSimpleJumpAbsolute(line);
                         }
@@ -1373,6 +1378,21 @@ namespace Analyzer
 
                 auxDesidentElementCounter--;
             }            
+        }
+
+        public Boolean printerVerifyIfInProgress()
+        {
+            IndentationLevel indentationLevelAux = new IndentationLevel();
+
+            foreach (IndentationLevel indentationLevel in nestedIndentations)
+            {
+                if (indentationLevel.tipoTk == TipoTk.TkSe)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public Boolean printerVerifyWhileInProgress()
@@ -3407,7 +3427,7 @@ namespace Analyzer
 
             for (int i = line+2; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
             {
-                if (printerLinesWithIfToken.Contains(i))
+                if ((printerLinesWithIfToken.Contains(i)) && (lineIndentations[line] == lineIndentations[i-1]))
                 {
                     return i;
                 }
@@ -3548,6 +3568,14 @@ namespace Analyzer
                     }
                 }
             }
+
+            for (int i = bytecodeRegisters.Count - 1; i >= 0; i--)
+            {
+                if ((bytecodeRegisters[i].opCode == (int)OpCode.JUMP_ABSOLUTE) && (bytecodeRegisters[i].stackPos == 0))
+                {
+                    bytecodeRegisters[i].stackPos = bytecodeRegisters[bytecodeRegisters.Count - 2].offset;
+                }
+            }
         }
 
         public void handleSetupLoop()
@@ -3599,7 +3627,7 @@ namespace Analyzer
                         {
                             j++;
 
-                            if (bytecodeRegisters[j].opCode == (int)OpCode.JUMP_FORWARD)
+                            if ((bytecodeRegisters[j].opCode == (int)OpCode.JUMP_FORWARD) || ((bytecodeRegisters[j].opCode == (int)OpCode.JUMP_ABSOLUTE) && bytecodeRegisters[j].TipoTk != TipoTk.TkFor))
                             {
                                 j++;
                             }

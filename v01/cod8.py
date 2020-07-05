@@ -1,0 +1,11 @@
+a = "Livro"
+d = "do"
+e = "Dragao"
+b = 5
+c = 10
+c /= 2
+if(b != c):
+	b *= 3
+if(b < 20):
+	while(b < 20):
+		b += 1
