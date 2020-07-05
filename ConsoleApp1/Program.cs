@@ -162,7 +162,7 @@ namespace ConsoleApp1
                 int result = s.Analizar(text);
                 if (result == 1)
                 {
-                    Console.WriteLine("Reconhecido com sucesso");
+                    Console.WriteLine("\nReconhecido com sucesso");
 
                     bytecodeGenerator.correctSyntax = true;
                 }

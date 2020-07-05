@@ -199,6 +199,9 @@ namespace Analyzer
         public Boolean printerFoundOpenParenthesis = false;
 
         public String printerVariableToRange = null;
+
+        public List<int> printerLinesWithIfToken = new List<int>();
+
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
@@ -2975,6 +2978,24 @@ namespace Analyzer
 
         public void printGeneratedBytecode()
         {
+            foreach(BytecodeRegister bytecodeRegister in bytecodeRegisters)
+            {
+                if ((bytecodeRegister.preview != null) && (bytecodeRegister.preview.Contains("\"") || bytecodeRegister.preview.Contains("\'")))
+                {
+                    bytecodeRegister.opCode = (int)OpCode.LOAD_CONST;
+
+                    string preview = bytecodeRegister.preview;
+
+                    char[] ch = preview.ToCharArray();
+
+                    ch[1] = '\'';
+
+                    ch[preview.IndexOf(")") - 1] = '\'';
+
+                    bytecodeRegister.preview = new string(ch);
+                }
+            }
+
             addFinalByteCodeRegisters();
 
             int lastPrintedLine = 0;
@@ -3381,6 +3402,14 @@ namespace Analyzer
                 if ((lineTypes[i] != LineType.IfStatement) && (lineIndentations[line] == lineIndentations[i]))
                 {
                     return i + 1;
+                }
+            }
+
+            for (int i = line+2; i <= bytecodeRegisters[bytecodeRegisters.Count - 1].lineInFile - 1; i++)
+            {
+                if (printerLinesWithIfToken.Contains(i))
+                {
+                    return i;
                 }
             }
 
@@ -4163,6 +4192,8 @@ namespace Analyzer
                             currentNestedIndentation.tipoTk = TipoTk.TkSe;
                             currentNestedIndentation.initialLine = currentLine;
                             nestedIndentations.Push(currentNestedIndentation);
+
+                            printerLinesWithIfToken.Add(currentLine);
 
                             break;
 
