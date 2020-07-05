@@ -688,7 +688,7 @@ namespace Analyzer
             }
             else if (OPATTR() == 1)
             {
-                if (EXPP1() == 1)
+                if (VALLAST() == 1)
                 {
                     if (LSTVAL() == 1)
                     {

@@ -16,3 +16,9 @@ C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\Analyzer\obj\Debug\An
 C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.dll
 C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.pdb
 C:\Users\Samuel Henrique\Desktop\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.csprojAssemblyReference.cache
+D:\Projects\Python_Bytecode_Generator\Analyzer\bin\Debug\Analyzer.dll
+D:\Projects\Python_Bytecode_Generator\Analyzer\bin\Debug\Analyzer.pdb
+D:\Projects\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.csprojAssemblyReference.cache
+D:\Projects\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.csproj.CoreCompileInputs.cache
+D:\Projects\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.dll
+D:\Projects\Python_Bytecode_Generator\Analyzer\obj\Debug\Analyzer.pdb
