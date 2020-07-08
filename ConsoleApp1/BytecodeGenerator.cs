@@ -202,6 +202,8 @@ namespace Analyzer
 
         public List<int> printerLinesWithIfToken = new List<int>();
 
+        public List<int> printerLinesWithElseToken = new List<int>();
+
         //--------------------------------------------------------------------------------------
 
         //--------------------------------------------------------------------------------------
@@ -2006,25 +2008,46 @@ namespace Analyzer
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
 
+        public Boolean verifyElseInPreviousLines(int line)
+        {
+            for(int i=line; i>=0; i--)
+            {
+                if (lineTypes[i] == LineType.ElseStatement)
+                {
+                    return true;
+                }
+
+                if((lineTypes[i] != LineType.IfStatement))
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
         public void addEndWhileRegisters(int currentLine)
         {
-            // Adds JUMP_ABSOLUTE
             BytecodeRegister bytecodeRegisterCurrentToken = new BytecodeRegister();
 
-            bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
+            // Adds JUMP_ABSOLUTE
+            if ((bytecodeRegisters[bytecodeRegisters.Count-1].opCode != (int)OpCode.JUMP_ABSOLUTE) || (!verifyElseInPreviousLines(currentLine-2)))
+            {
+                bytecodeRegisterCurrentToken.lineInGeneratedBytecode = currentLineInGeneratedBytecode++;
 
-            bytecodeRegisterCurrentToken.lineInFile = currentLine;
+                bytecodeRegisterCurrentToken.lineInFile = currentLine;
 
-            bytecodeRegisterCurrentToken.offset = currentOffset;
+                bytecodeRegisterCurrentToken.offset = currentOffset;
 
-            bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
+                bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
 
-            // TODO
-            bytecodeRegisterCurrentToken.stackPos = 0;
+                // TODO
+                bytecodeRegisterCurrentToken.stackPos = 0;
 
-            bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+                bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
 
-            bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+                bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
+            }
 
             // Adds POP_BLOCK
             bytecodeRegisterCurrentToken = null;
@@ -3266,6 +3289,34 @@ namespace Analyzer
             return false;
         }
 
+        public Boolean printerHasElseInNextLine(int line)
+        {
+            if(line >= lineTypes.Count)
+            {
+                return false;
+            }
+
+            if(lineTypes[line] == LineType.ElseStatement)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public int getValidLineToPopJumpIfFalseNestedOperationsElseStatements(int line)
+        {
+            for(int i=line; i< lineTypes.Count; i++)
+            {
+                if (lineTypes[i] != LineType.ElseStatement)
+                {
+                    return i+1;
+                }
+            }
+
+            return -1;
+        }
+
         public void popJumpIfFalseNestedOperations()
         {
             Boolean next = false;
@@ -3283,7 +3334,29 @@ namespace Analyzer
 
                     if ((whileIndentationLevel.Count>0) && (lineTypes[bytecodeRegisters[i].lineInFile-1] != LineType.WhileStatement))
                     {
-                        for(int j=i; j>=0; j--)
+                        if (printerHasElseInNextLine(bytecodeRegisters[i].lineInFile+1))
+                        {
+                            int lineToGetOffsetOfElse = getValidLineToPopJumpIfFalseNestedOperationsElseStatements(bytecodeRegisters[i].lineInFile + 1);
+
+                            for(int j=i; j<bytecodeRegisters.Count - 1; j++)
+                            {
+                                if (bytecodeRegisters[j].lineInFile == lineToGetOffsetOfElse)
+                                {
+                                    bytecodeRegisters[i].stackPos = bytecodeRegisters[j].offset;
+
+                                    next = true;
+
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (next)
+                        {
+                            continue;
+                        }
+
+                        for (int j=i; j>=0; j--)
                         {
                             if (bytecodeRegisters[j].opCode == (int)OpCode.SETUP_LOOP)
                             {
@@ -3785,13 +3858,22 @@ namespace Analyzer
 
                     bytecodeRegisterCurrentToken.lineInFile = printerLastLineWithElse - 1;
 
+                    if (printerhasElseInLine(bytecodeRegisters[i].lineInFile+1))
+                    {
+                        bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_ABSOLUTE;
 
-                    bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_FORWARD;
+                        // TODO
+                        bytecodeRegisterCurrentToken.stackPos = 0;
+                    }
+                    else
+                    {
+                        bytecodeRegisterCurrentToken.opCode = (int)OpCode.JUMP_FORWARD;
 
-                    // TODO
-                    bytecodeRegisterCurrentToken.stackPos = 0;
+                        // TODO
+                        bytecodeRegisterCurrentToken.stackPos = 0;
 
-                    bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
+                        bytecodeRegisterCurrentToken.preview = "(to " + currentOffset + getOpCodeOffsetSize(OpCode.JUMP_FORWARD) + ")";
+                    }
 
                     bytecodeRegisters.Insert(i + 1, bytecodeRegisterCurrentToken);
 
@@ -3800,6 +3882,16 @@ namespace Analyzer
                     break;
                 }
             }
+        }
+
+        public Boolean printerhasElseInLine(int line)
+        {
+            if (printerLinesWithElseToken.Contains(line))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public int searchJumpForward()
@@ -4260,6 +4352,8 @@ namespace Analyzer
                             currentNestedIndentation.tipoTk = TipoTk.TkSenao;
                             currentNestedIndentation.initialLine = currentLine;
                             nestedIndentations.Push(currentNestedIndentation);
+
+                            printerLinesWithElseToken.Add(currentLine);
 
                             break;
 
