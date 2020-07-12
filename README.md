@@ -21,4 +21,5 @@ Nível 1: multiplicação, divisão, “*=”, “/=”
 Nível 2: adição, subtração, “+=”, “-=”
 Nível 3: igualdade, diferença, menor que, maior que
 
-OBS: Executável do Projeto está na pasta v01 juntamente com os exemplos testados
+OBS 1) Executável do Projeto está na pasta Python_Bytecode_Generator\ConsoleApp1\bin\Debug\ConsoleApp1.exe
+OBS 2) Na pasta v01 estão os exemplos testados

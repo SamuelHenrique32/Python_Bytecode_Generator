@@ -4,6 +4,7 @@ using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Threading;
 
@@ -250,6 +251,14 @@ namespace Analyzer
         public IndentationLevel currentNestedIndentation = new IndentationLevel();
 
         public Boolean currentCodeHasNestedIndentations = false;
+
+        //--------------------------------------------------------------------------------------
+
+        //--------------------------------------------------------------------------------------
+        // Stack preview
+        public List<StackRegister> stackRegistersConstant = new List<StackRegister>();
+
+        public List<StackRegister> stackRegistersName = new List<StackRegister>();
 
         //--------------------------------------------------------------------------------------
 
@@ -689,6 +698,8 @@ namespace Analyzer
                             identifierValue = Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2);
 
                             //handleStack(OpCode.LOAD_CONST, Int16.Parse(operationsInCurrentLine[operationsInCurrentLine.Count - 1].operand2));
+
+                            handleStackLoadConstArithmeticOperation(Int16.Parse(operationsInCurrentLine[searchForSimpleAtribIndex()].operand2));
                         }
                     }
                     else if (printerShowOperationType)
@@ -801,6 +812,40 @@ namespace Analyzer
                                 bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
                                 handleStack(OpCode.LOAD_CONST, valueToAddInStack);
+
+                                if (!printerAtribuition())
+                                {
+                                    String valueString = bytecodeRegisterCurrentToken.preview;
+
+                                    char[] chValueString = valueString.ToCharArray();
+
+                                    char[] chValueStringNoSpecialCharacters = new char[chValueString.Length - 2];
+
+                                    for (int j = 0; j < chValueString.Length; j++)
+                                    {
+                                        if (chValueString[j] == '(')
+                                        {
+                                            int index = j + 1;
+
+                                            int chIndex = 0;
+
+                                            while (chValueString[index] != ')')
+                                            {
+                                                chValueStringNoSpecialCharacters[chIndex] = chValueString[index];
+
+                                                chIndex++;
+
+                                                index++;
+                                            }
+
+                                            break;
+                                        }
+                                    }
+
+                                    string valueStringNoSpecialCharacters = new string(chValueStringNoSpecialCharacters);
+
+                                    handleStackLoadConstArithmeticOperation(Int16.Parse(valueStringNoSpecialCharacters));
+                                }
                             }                            
                         }
                     }
@@ -1092,6 +1137,8 @@ namespace Analyzer
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
 
             //this.currentOffset += getOpCodeOffsetSize(OpCode.LOAD_CONST);
+
+            handleStackLoadConstArithmeticOperation(value);
         }
 
         public void addSimpleLoadName(int? value, int currentLine, String identifier)
@@ -1882,6 +1929,8 @@ namespace Analyzer
             bytecodeRegisterCurrentToken.preview = "(range)";
 
             bytecodeRegisterCurrentToken.indentationLevel = nestedIndentations.Count;
+
+            bytecodeRegisterCurrentToken.TipoTk = TipoTk.TkFor;
 
             bytecodeRegisters.Add(bytecodeRegisterCurrentToken);
         }
@@ -2680,6 +2729,8 @@ namespace Analyzer
             else
             {
                 arithmeticalOperand1 = Int16.Parse(operation.operand1);
+
+                handleStackLoadConstArithmeticOperation(Int16.Parse(operation.operand1));
             }
 
             if (arithmeticalIdentifierOperand2 != null)
@@ -2689,6 +2740,8 @@ namespace Analyzer
             else
             {
                 arithmeticalOperand2 = Int16.Parse(operation.operand2);
+
+                handleStackLoadConstArithmeticOperation(Int16.Parse(operation.operand2));
             }
 
             switch (operation.currentOperator)
@@ -3086,6 +3139,8 @@ namespace Analyzer
                 printerHandleStackAndPreviewForNestedCodes();
             }
 
+            handleStack();
+
             Console.WriteLine("\nBytecode Gerado:");
 
             foreach (BytecodeRegister bytecodeRegister in bytecodeRegisters)
@@ -3162,8 +3217,15 @@ namespace Analyzer
 
                 if (bytecodeRegister.opCode != (int)OpCode.BINARY_ADD && bytecodeRegister.opCode != (int)OpCode.BINARY_SUBTRACT && bytecodeRegister.opCode != (int)OpCode.BINARY_MULTIPLY && bytecodeRegister.opCode != (int)OpCode.BINARY_TRUE_DIVIDE)
                 {
-                    // TODO
-                    Console.Write(bytecodeRegister.stackPos + "  ");
+                    if(bytecodeRegister.stackPos < 10)
+                    {
+                        Console.Write(bytecodeRegister.stackPos + "  ");
+                    }
+                    else
+                    {
+                        Console.Write(bytecodeRegister.stackPos + " ");
+                    }
+                    
                 }
                 else
                 {
@@ -3172,6 +3234,154 @@ namespace Analyzer
 
                 Console.WriteLine(bytecodeRegister.preview);
             }
+        }
+
+        public void handleStack()
+        {
+            //stackRegistersConstant.Add(new StackRegister("null"));
+
+            for (int i=0; i< bytecodeRegisters.Count; i++)
+            {
+                switch (bytecodeRegisters[i].opCode)
+                {
+                    case (int)OpCode.LOAD_CONST:
+
+                        if (i < bytecodeRegisters.Count-2)
+                        {
+                            bytecodeRegisters[i].stackPos = handleStackLoadConst(bytecodeRegisters[i]);
+                        }
+                        
+                        break;
+
+                    case (int)OpCode.STORE_NAME:
+                    case (int)OpCode.LOAD_NAME:
+
+                        bytecodeRegisters[i].stackPos = handleStackName(bytecodeRegisters[i]);
+
+                        break;
+
+                    case (int)OpCode.LOAD_GLOBAL:
+                        
+                        if(bytecodeRegisters[i].TipoTk != TipoTk.TkFor)
+                        {
+                            bytecodeRegisters[i].stackPos = handleStackName(bytecodeRegisters[i]);
+                        }
+
+                        break;
+
+                    case (int)OpCode.COMPARE_OP:
+
+                        if (bytecodeRegisters[i].preview.Equals("(>)"))
+                        {
+                            bytecodeRegisters[i].stackPos = 4;
+                        }
+                        else if (bytecodeRegisters[i].preview.Equals("(<)"))
+                        {
+                            bytecodeRegisters[i].stackPos = 0;
+                        }
+                        else if (bytecodeRegisters[i].preview.Equals("(==)"))
+                        {
+                            bytecodeRegisters[i].stackPos = 2;
+                        }
+                        else if (bytecodeRegisters[i].preview.Equals("(!=)"))
+                        {
+                            bytecodeRegisters[i].stackPos = 3;
+                        }
+
+                        break;
+
+                    case (int)OpCode.CALL_FUNCTION:
+
+                        bytecodeRegisters[i].stackPos = 1;
+
+                        break;
+
+                    case (int)OpCode.SETUP_LOOP:
+                    case (int)OpCode.JUMP_FORWARD:
+                    case (int)OpCode.FOR_ITER:
+
+                        String topValue = bytecodeRegisters[i].preview;
+
+                        char[] chTopValue = topValue.ToCharArray();
+
+                        char[] chTopValueNoSpecialCharacters = new char[chTopValue.Length-5];
+
+                        for (int j=0; j<chTopValue.Length; j++)
+                        {
+                            if(chTopValue[j] == 't' && chTopValue[j+1] == 'o' && chTopValue[j+2] == ' ')
+                            {
+                                int index = j + 3;
+
+                                int chIndex = 0;
+
+                                while(chTopValue[index] != ')')
+                                {
+                                    chTopValueNoSpecialCharacters[chIndex] = chTopValue[index];
+
+                                    chIndex++;
+
+                                    index++;
+                                }
+
+                                break;
+                            }
+                        }
+
+                        string topValueNoSpecialCharacters = new string(chTopValueNoSpecialCharacters);
+
+                        bytecodeRegisters[i].stackPos = Int16.Parse(topValueNoSpecialCharacters) - (bytecodeRegisters[i + 1].offset);
+
+                        break;
+                }
+            }
+        }
+
+        public int handleStackLoadConst(BytecodeRegister bytecodeRegister)
+        {
+            for(int i=0; i< stackRegistersConstant.Count; i++)
+            {
+                if (stackRegistersConstant[i].value.Equals(bytecodeRegister.preview))
+                {
+                    return (i + 1);
+                }
+            }
+
+            stackRegistersConstant.Add(new StackRegister(bytecodeRegister.preview));
+
+            return stackRegistersConstant.Count;
+        }
+
+        public void handleStackLoadConstArithmeticOperation(int? value)
+        {
+            for (int i = 0; i < stackRegistersConstant.Count; i++)
+            {
+                if (stackRegistersConstant[i].value.Equals("(" + value.ToString() + ")"))
+                {
+                    return;
+                }
+            }
+
+            stackRegistersConstant.Add(new StackRegister("(" + value.ToString() + ")"));
+        }
+
+        public int handleStackName(BytecodeRegister bytecodeRegister)
+        {
+            for (int i = 0; i < stackRegistersName.Count; i++)
+            {
+                if (stackRegistersName[i].value.Equals(bytecodeRegister.preview))
+                {
+                    return i;
+                }
+            }
+
+            stackRegistersName.Add(new StackRegister(bytecodeRegister.preview));
+
+            if(stackRegistersName.Count == 1)
+            {
+                return 0;
+            }
+
+            return stackRegistersName.Count-1;
         }
 
         public void printerHandleStackAndPreviewForNestedCodes()

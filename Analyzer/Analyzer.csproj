@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Analisador.cs" />
     <Compile Include="BytecodeRegister.cs" />
+    <Compile Include="StackRegister.cs" />
     <Compile Include="IndentationLevel.cs" />
     <Compile Include="LineType.cs" />
     <Compile Include="IdentDesidentLevel.cs" />
